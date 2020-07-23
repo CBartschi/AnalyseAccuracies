@@ -75,12 +75,41 @@ for (method in c("RKHS")){
   }
 }
 
+for (method in c("RKHS")){
+  for (trait in c("FL", "PH", "YLD14", "ZN")){
+    for (CV in c("IMBcdm")){
+      for (s in c(25, 50, 100, 200)){
+        if (CV == "CV2_site"){
+          s <- 0.3
+        }
+        
+        S02 <- read.csv(paste0(trait, "_", method, "Gmat/Pred_S02_", trait, "_", method, "_", CV, "_", s, ".csv"))
+        S02$s <- s
+        S02$Predictor <- "S02"
+        S02$ID <- paste0(S02$trait, S02$LOC, S02$DNAID, S02$Predictor)
+        S02$CV <- "IMBcdm_Gmat"
+        
+        S03 <- read.csv(paste0(trait, "_", method, "Gmat/Pred_S03_", trait, "_", method, "_", CV, "_", s, ".csv"))
+        S03$s <- s
+        S03$Predictor <- "S03"
+        S03$ID <- paste0(S03$trait, S03$LOC, S03$DNAID, S03$Predictor)
+        S03$CV <- "IMBcdm_Gmat"
+        
+        Pred_cmpt <- rbind(Pred_cmpt, S02, S03)
+        # Pred_list <- list(S0=noGEN, S02=S02, S03=S03)
+        
+      }
+    }
+  }
+}
+
+
 Pred_cmpt$Predictor <- as.factor(Pred_cmpt$Predictor)
 
 write.csv(Pred_cmpt, paste0("Prediction_cmpt_", today, ".csv"),
 row.names = F)
 
-Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
+# Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
 # Pred_cmpt_wide <- reshape(Pred_cmpt,
 #                      direction = "wide",
 #                      v.names = c("ref", "pred"),

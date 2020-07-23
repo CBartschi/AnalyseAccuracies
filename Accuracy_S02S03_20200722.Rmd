@@ -36,8 +36,8 @@ output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
 ```{r load and prepare files, include=FALSE}
 # File Input  -------------------------------------------------------------
 
-Acc_input <- "Accuracies_20200722.csv"
-sumAcc_input <- "summary_Accuracy_20200722.csv"
+Acc_input <- "Accuracies_20200723.csv"
+sumAcc_input <- "summary_Accuracy_20200723.csv"
 
 # Load files --------------------------------------------------------------
 
@@ -54,7 +54,7 @@ summAcc<- summAcc_intput
 # Acc
 levels(Acc$CV) <- c(levels(Acc$CV), "CV2")
 Acc$CV[Acc$CV=="CV2_site"] <- "CV2"
-Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm"))
+Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Gmat"))
 
 levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
 Acc$LOC[Acc$LOC=="PA"] <- "PAL"
@@ -85,7 +85,7 @@ Acc <- droplevels(Acc)
 # summAcc
 levels(summAcc$CV) <- c(levels(summAcc$CV), "CV2")
 summAcc$CV[summAcc$CV=="CV2_site"] <- "CV2"
-summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm"))
+summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Gmat"))
 
 levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
 summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
