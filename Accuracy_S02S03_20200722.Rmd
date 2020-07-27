@@ -36,8 +36,8 @@ output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
 ```{r load and prepare files, include=FALSE}
 # File Input  -------------------------------------------------------------
 
-Acc_input <- "Accuracies_20200723.csv"
-sumAcc_input <- "summary_Accuracy_20200723.csv"
+Acc_input <- "Accuracies_20200724.csv"
+sumAcc_input <- "summary_Accuracy_20200724.csv"
 
 # Load files --------------------------------------------------------------
 
@@ -54,7 +54,7 @@ summAcc<- summAcc_intput
 # Acc
 levels(Acc$CV) <- c(levels(Acc$CV), "CV2")
 Acc$CV[Acc$CV=="CV2_site"] <- "CV2"
-Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Gmat"))
+Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Gmat", "IMBcdm_Kmat"))
 
 levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
 Acc$LOC[Acc$LOC=="PA"] <- "PAL"
@@ -85,7 +85,7 @@ Acc <- droplevels(Acc)
 # summAcc
 levels(summAcc$CV) <- c(levels(summAcc$CV), "CV2")
 summAcc$CV[summAcc$CV=="CV2_site"] <- "CV2"
-summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Gmat"))
+summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Gmat", "IMBcdm_Kmat"))
 
 levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
 summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
@@ -209,6 +209,41 @@ ggsave(filename = paste0(output,"Fig_CV2_allAcc_long.png"),
        plot, width = 16, height = 20, units = "cm")
 
 ```
+## RKHS matrix effect
+```{r rkhs matrix effect, echo=FALSE}
+datarkhs <- dataPA[dataPA$CV %in% c("IMBcdm_Gmat", "IMBcdm_Kmat", "IMBran") & dataPA$method=="RKHS",]
+
+datarkhs$z <- (0.5 * (log(1+datarkhs$mean) - log(1-datarkhs$mean)))
+datarkhs$s <- as.factor(datarkhs$s)
+
+  ggplot(datarkhs, 
+       aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+  geom_point(aes(color = CV, shape = Predictor), position=position_dodge(0.5))+ #shape = Proxy
+  facet_grid(trait~method, scales = "free_y")+
+  # ggtitle("Size comparison")+
+  # ylab("Cor(GEBV, Yref)")+
+  ylab("cor(GEBV, Yref)")+
+  xlab("SRO set size")+
+  scale_colour_manual(values = c("blue", "red", "darkgreen"))+
+  theme_light()+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  theme(strip.background =element_blank(),
+        strip.text = element_text(colour = "black"))
+
+rkhs_lmMain <- dlply(datarkhs, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Predictor + CV + s, data =x[x$CV!="IMBran",]),
+                                                                  tr=x$trait[1]))
+
+summTable_rkhs <- ldply(.data=rkhs_lmMain, .fun=summTable_fun)
+
+kable(summTable_rkhs)
+
+```
+
+
+
 ## Size effect
 ```{r size effect, echo=FALSE}
 plot <- 
@@ -228,7 +263,7 @@ plot <-
   # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
-  ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Predictor %in% c("LVS02", "LVS03"),], 
+  ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Predictor %in% c("LVS02", "LVS03"),], 
        aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
   geom_point(aes(color = Predictor, shape = CV), position=position_dodge(0.5))+ #shape = Proxy

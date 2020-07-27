@@ -103,13 +103,41 @@ for (method in c("RKHS")){
   }
 }
 
+for (method in c("RKHS")){
+  for (trait in c("FL", "PH", "YLD14", "ZN")){
+    for (CV in c("IMBcdm")){
+      for (s in c(25, 50, 100, 200)){
+        if (CV == "CV2_site"){
+          s <- 0.3
+        }
+        
+        S02 <- read.csv(paste0(trait, "_", method, "_Kmat/Pred_S02_", trait, "_", method, "_", CV, "_", s, ".csv"))
+        S02$s <- s
+        S02$Predictor <- "S02"
+        S02$ID <- paste0(S02$trait, S02$LOC, S02$DNAID, S02$Predictor)
+        S02$CV <- "IMBcdm_Kmat"
+        
+        S03 <- read.csv(paste0(trait, "_", method, "_Kmat/Pred_S03_", trait, "_", method, "_", CV, "_", s, ".csv"))
+        S03$s <- s
+        S03$Predictor <- "S03"
+        S03$ID <- paste0(S03$trait, S03$LOC, S03$DNAID, S03$Predictor)
+        S03$CV <- "IMBcdm_Kmat"
+        
+        Pred_cmpt <- rbind(Pred_cmpt, S02, S03)
+        # Pred_list <- list(S0=noGEN, S02=S02, S03=S03)
+        
+      }
+    }
+  }
+}
 
 Pred_cmpt$Predictor <- as.factor(Pred_cmpt$Predictor)
 
 write.csv(Pred_cmpt, paste0("Prediction_cmpt_", today, ".csv"),
 row.names = F)
 
-# Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
+Pred_cmpt <- read.csv("Prediction_cmpt_20200724.csv", header = TRUE)
+Pred_cmpt$s <- as.factor(Pred_cmpt$s)
 # Pred_cmpt_wide <- reshape(Pred_cmpt,
 #                      direction = "wide",
 #                      v.names = c("ref", "pred"),
@@ -120,7 +148,7 @@ row.names = F)
 
 # load reference ----------------------------------------------------------
 
-S02 <- read.csv("~/OneDrive/AnalysePheno/PCT27/Output_cluster/S02_REFERENCE_on384_20200722.csv",
+S02 <- read.csv("~/OneDrive/AnalysePheno/PCT27/Output_cluster/S02_REFERENCE_on334_20200722.csv",
                    header = TRUE)
 colnames(S02)[5] <- paste0("S02_", colnames(S02)[5])
 S02$ID <- paste0(S02$Trait, S02$LOC, S02$DNAID, "S02")
@@ -133,6 +161,8 @@ S03$ID <- paste0(S03$Trait, S03$LOC, S03$DNAID, "S03")
 # Complete prediction with reference --------------------------------------
 
 Pred_ref_S02 <- merge(Pred_cmpt[Pred_cmpt$Predictor=="S02",], S02[,c(1,5)], by="ID")
+# Pred_ref_S02[!Pred_ref_S02$CV %in% c("CV2_site", "IMBran"),]
+
 Pred_ref_S03 <- merge(Pred_cmpt[Pred_cmpt$Predictor=="S03",], S03[,c(1,5)], by="ID")
 
 Pred_list <- list(S02=Pred_ref_S02, S03=Pred_ref_S03)
