@@ -30,7 +30,7 @@ if (office=="CIRAD"){
 # knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
 # output
 # output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
-dir.create("output_noCDm")
+
 ```
 
 ```{r function summTable, include=FALSE}
@@ -139,7 +139,7 @@ sumAcc:`r sumAcc_input`
 #Résultat
 ## Trait
 ```{r trait, echo=FALSE}
-plot1 <- 
+plot1 <-
   ggplot(data=dataPA, aes(x=Generation, y=mean, group=Generation))+
     geom_boxplot(aes(colour=Generation))+
     geom_point(position = position_jitterdodge(), aes(colour=Generation))+
@@ -148,9 +148,11 @@ plot1 <-
     theme_light()+
     theme(legend.position = "none")
 
-ggsave(filename = paste0("output_noCDm/",
-                         "Fig_trait_summAcc_noCDm.png"),
+fileN <- paste0("output_noCDm/",
+                         "Fig_trait_summAcc_noCDm.png")
+ggsave(filename = fileN,
        plot1, width = 15, height = 15, units = "cm")
+cat(fileN)
 
 plot2 <- 
   ggplot(data=Acc, aes(x=Generation, y=mean, group=Generation))+
@@ -161,9 +163,11 @@ plot2 <-
     theme_light()+
     theme(legend.position = "none")
 
-ggsave(filename = paste0("output_noCDm/",
-                         "Fig_trait_Acc_noCDm.png"),
+fileN <- paste0("output_noCDm/",
+                         "Fig_trait_Acc_noCDm.png")
+ggsave(filename = fileN,
        plot2, width = 15, height = 15, units = "cm")
+cat(fileN)
 
 cat("\n", "mean by scenario", "\n")
 plot1
@@ -206,11 +210,11 @@ plot1 <-
           strip.text = element_text(colour = "black"),
           axis.text.x = element_text(angle = 90))
 
-
-ggsave(filename = paste0("output/",
-                         "Fig_CV2_summAcc_long.png"),
+fileN <- paste0("output/",
+                         "Fig_CV2_summAcc_long.png")
+ggsave(filename = fileN,
        plot1, width = 15, height = 15, units = "cm")
-
+cat(fileN)
 
 plot2 <- 
   # ggplot(Acc[Acc$CV == "CV2",], aes(x=Generation, y=mean, color=LOC))+
@@ -240,9 +244,11 @@ plot2 <-
           strip.text = element_text(colour = "black"),
           axis.text.x = element_text(angle = 90))
 
-ggsave(filename = paste0("output/",
-                         "Fig_CV2_allAcc_long.png"),
+fileN <- paste0("output/",
+                         "Fig_CV2_allAcc_long.png")
+ggsave(filename = fileN,
        plot2, width = 18, height = 15, units = "cm")
+cat(fileN)
 
 cat("\n", "mean by scenario", "\n")
 plot1
@@ -251,7 +257,7 @@ plot2
 ```
 
 ## Size effect  
-```{r size effect, echo=FALSE}
+```{r fig size effect, echo=FALSE}
 plot1 <- 
   # ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Generation %in% c("S02", "S03"),], 
   #      aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
@@ -270,9 +276,9 @@ plot1 <-
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
   ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Generation %in% c("S02", "S03"),], 
-       aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+       aes(x=xlabel, y= mean, group=xlabel, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
-  geom_point(aes(color = Generation, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
+  geom_point(aes(color = Generation), position=position_dodge(0.5))+ #shape = Proxy
   facet_grid(trait~method)+
   # ggtitle("Size comparison")+
   # ylab("Cor(GEBV, Yref)")+
@@ -286,9 +292,11 @@ plot1 <-
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
 
-ggsave(filename = paste0("output_noCDm/",
-                         "Fig_sizeEffect_summAcc_long_noCDm.png"),
+fileN <- paste0("output_noCDm/",
+                         "Fig_sizeEffect_summAcc_long_noCDm.png")
+ggsave(filename = fileN,
        plot1, width = 16, height = 20, units = "cm")
+cat(fileN)
 
 plot2 <- 
   # ggplot(Acc[Acc$LOC != "PAL" & Acc$Generation %in% c("S02", "S03"),], 
@@ -321,9 +329,11 @@ plot2 <-
   scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
-ggsave(filename = paste0("output_noCDm/",
-                         "Fig_sizeEffect_allAcc_long_noCDm.png"),
+fileN <- paste0("output_noCDm/",
+                         "Fig_sizeEffect_allAcc_long_noCDm.png")
+ggsave(filename = fileN,
        plot2, width = 16, height = 20, units = "cm")
+cat(fileN)
 
 cat("\n", "mean by scenario", "\n")
 plot1
@@ -357,10 +367,11 @@ plot1 <-
     scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"))
-
-ggsave(filename = paste0("output_noCDm/",
-                         "Fig_samplingEffect_summAcc_long_noCDm.png"),
+fileN <- paste0("output_noCDm/",
+                         "Fig_samplingEffect_summAcc_long_noCDm.png")
+ggsave(filename = fileN,
        plot1, width = 16, height = 20, units = "cm")
+cat(fileN)
 
 plot2 <- 
   # ggplot(Acc[Acc$LOC == "SRO" & Acc$s %in% c("200", "234"),], aes(x=Generation,y=mean, color=CV))+
@@ -384,9 +395,12 @@ plot2 <-
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"))
 
-ggsave(filename = paste0("output_noCDm/",
-                         "Fig_samplingEffect_allAcc_long_noCDm.png"),
+fileN <- paste0("output_noCDm/",
+                         "Fig_samplingEffect_allAcc_long_noCDm.png")
+ggsave(filename = fileN,
        plot2, width = 16, height = 20, units = "cm")
+cat(fileN)
+
 cat("\n", "mean by scenario", "\n")
 plot1
 cat("\n", "all data", "\n")
@@ -403,7 +417,7 @@ plot2
 ## Statistical analysis
 Data analyse
 ```{r data stat, echo=TRUE}
-dataPA <- summAcc
+dataPA <- droplevels(summAcc[summAcc$CV!="IMBcdm",])
 ```
 
 ```{r prepare data, echo=FALSE}
@@ -412,7 +426,6 @@ dataPA$s <- as.factor(dataPA$s)
 
 n <- ddply(dataPA, .(trait), summarise, n <- nrow(dataPA))
 n <- n[1,2]
-# summary(dataPA)
 ```
 
 ```{r analyse CV2, echo=FALSE}
@@ -424,15 +437,15 @@ CV2_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ LO
 summTable_CV2 <- ldply(.data=CV2_lmMain, .fun = summTable_fun)
 
 # kable(summTable_CV2[,-1])  
-
-write.csv(file=paste0("output/",
+fileN <- paste0("output/",
                       "Analyse_CV2_n",
                       n,
                       "_",
                       today,
-                      ".csv"),
+                      ".csv")
+write.csv(file=fileN,
           summTable_CV2[,-1])
-
+cat(fileN)
 # for (trait in levels(dataPA$trait)){
 #   cat("###",trait,"\n","\n")
 #   print(anova(CV2_lmMain[[trait]]$lmobj))
@@ -451,14 +464,21 @@ size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ G
 summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
 summTable_size$Trait <- as.character(summTable_size$Trait)
 
+size_lmMain$FL$lmobj$coefficients
+
+
 summTable_size[is.na(summTable_size)] <- ""
 kable(summTable_size[,-1])
 
-write.csv(file=paste0("output_noCDm/",
-                      "Analyse_size_noCDm_",
-                      today,
-                      ".csv"),
+fileN <- paste0("output_noCDm/",
+                "Analyse_size_noCDm_n",
+                n,
+                "_",
+                today,
+                ".csv")
+write.csv(file=fileN,
           summTable_size[,-1])
+cat(fileN)
 
 # for (trait in levels(dataPA$trait)){
 #   cat("###",trait,"\n","\n")
@@ -481,13 +501,14 @@ summaTable_Int <- ldply(.data=size_lmInt, .fun=summTable_fun)
 
 # kable(summaTable_Int[,-1])
 
-write.csv(file=paste0("Analyse_sizeInter_n",
+fileN <- paste0("Analyse_sizeInter_n",
                       n,
                       "_",
                       today,
-                      ".csv"),
+                      ".csv")
+write.csv(file=fileN,
           summaTable_Int[,-1])
-
+cat(fileN)
 # for (trait in levels(dataPA$trait)){
 #   cat("###",trait,"\n","\n")
 #   print(anova(size_lmInt[[trait]]$lmobj))
