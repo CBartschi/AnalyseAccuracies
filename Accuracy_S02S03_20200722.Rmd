@@ -30,7 +30,26 @@ if (office=="CIRAD"){
 knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
 # output
 output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
+```
 
+```{r function summTable, include=FALSE}
+summTable_fun <- function(x){
+  lmd <- x$lmobj
+  tr <- x$tr
+  
+  r2 <- round(summary(lmd)$r.square, 3)
+  
+  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
+                   "Variable"=rownames(anova(lmd)),
+                   anova(lmd),
+                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
+  rownames(df)=NULL
+  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
+  
+  df[,7][df$Pr..F.==0] <- "<0.001"
+  
+  return(df)
+}
 ```
 
 ```{r load and prepare files, include=FALSE}
@@ -41,11 +60,15 @@ sumAcc_input <- "summary_Accuracy_20200722.csv"
 
 # Load files --------------------------------------------------------------
 
-Acc_infile <- read.csv(Acc_input,
+Acc_infile <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                              Acc_input),
                        header = TRUE)
 Acc <- Acc_infile
 
-summAcc_intput <- read.csv(paste0(sumAcc_input),
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                                  sumAcc_input),
                            header = TRUE)
 summAcc<- summAcc_intput
 
@@ -358,27 +381,6 @@ n <- n[1,2]
 # summary(dataPA)
 ```
 
-```{r function summTable, include=FALSE}
-summTable_fun <- function(x){
-  lmd <- x$lmobj
-  tr <- x$tr
-  
-  r2 <- round(summary(lmd)$r.square, 3)
-  
-  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
-                   "Variable"=rownames(anova(lmd)),
-                   anova(lmd),
-                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
-  rownames(df)=NULL
-  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
-  
-  df[,7][df$Pr..F.==0] <- "<0.001"
-  
-  return(df)
-}
-```
-
-
 
 ```{r analyse CV2, echo=FALSE}
 
@@ -411,18 +413,17 @@ write.csv(file=paste0(output,
 ```{r analyse size effect Main, echo=FALSE}
 
 size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Predictor + method + s, data = x[x$CV!="CV2",]),
-                                                                  tr=x$trait[1])) # en attendant CDmean
-# size_lmMain <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Predictor + method + CV:s, data = x[x$CV!="CV2",]))
+                                                                  tr=x$trait[1]))
 
 summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
 
 # kable(summTable_size[,-1])
 
-# write.csv(file=paste0(output,
-#                       "Analyse_CV2_",
-#                       today,
-#                       ".csv"),
-#           summTable_CV2[,-1])
+write.csv(file=paste0(output,
+                      "Analyse_size_noCDm_",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
 
 # for (trait in levels(dataPA$trait)){
 #   cat("###",trait,"\n","\n")
@@ -437,9 +438,7 @@ summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
 size_lmInt <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Predictor + method + s + 
                                                                  Predictor:method + Predictor:s + method:s, data = x[x$CV!="CV2",]),
                                                                  tr=x$trait[1]))
-# size_lmInt <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Predictor + method + CV:s + 
-#                                                                  CV:Predictor + CV:method + Predictor:method+
-#                                                                  Predictor:CV:s + method:CV:s, data = x[x$CV!="CV2",]))
+
 
 summaTable_Int <- ldply(.data=size_lmInt, .fun=summTable_fun)
 
