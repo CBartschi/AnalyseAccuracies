@@ -30,7 +30,7 @@ if (office=="CIRAD"){
 # knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
 # output
 # output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
-
+dir.create("output_noCDm")
 ```
 
 ```{r function summTable, include=FALSE}
@@ -128,7 +128,8 @@ summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", 
 
 summAcc <- droplevels(summAcc)
 
-dataPA <- summAcc
+dataPA <- summAcc[summAcc$CV!="IMBcdm",]
+Acc <- Acc[Acc$CV!="IMBcdm",]
 ```
 
 #Data  
@@ -146,7 +147,9 @@ plot1 <-
     facet_grid(.~trait)+
     theme_light()+
     theme(legend.position = "none")
-ggsave(filename = paste0(output,"Fig_trait_summAcc.png"),
+
+ggsave(filename = paste0("output_noCDm/",
+                         "Fig_trait_summAcc_noCDm.png"),
        plot1, width = 15, height = 15, units = "cm")
 
 plot2 <- 
@@ -158,8 +161,8 @@ plot2 <-
     theme_light()+
     theme(legend.position = "none")
 
-ggsave(filename = paste0("output/",
-                         "Fig_trait_Acc.png"),
+ggsave(filename = paste0("output_noCDm/",
+                         "Fig_trait_Acc_noCDm.png"),
        plot2, width = 15, height = 15, units = "cm")
 
 cat("\n", "mean by scenario", "\n")
@@ -283,8 +286,8 @@ plot1 <-
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
 
-ggsave(filename = paste0("output/",
-                         "Fig_sizeEffect_summAcc_long.png"),
+ggsave(filename = paste0("output_noCDm/",
+                         "Fig_sizeEffect_summAcc_long_noCDm.png"),
        plot1, width = 16, height = 20, units = "cm")
 
 plot2 <- 
@@ -318,8 +321,8 @@ plot2 <-
   scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
-ggsave(filename = paste0("output/",
-                         "Fig_sizeEffect_allAcc_long.png"),
+ggsave(filename = paste0("output_noCDm/",
+                         "Fig_sizeEffect_allAcc_long_noCDm.png"),
        plot2, width = 16, height = 20, units = "cm")
 
 cat("\n", "mean by scenario", "\n")
@@ -355,8 +358,8 @@ plot1 <-
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"))
 
-ggsave(filename = paste0("output/",
-                         "Fig_samplingEffect_summAcc_long.png"),
+ggsave(filename = paste0("output_noCDm/",
+                         "Fig_samplingEffect_summAcc_long_noCDm.png"),
        plot1, width = 16, height = 20, units = "cm")
 
 plot2 <- 
@@ -381,8 +384,8 @@ plot2 <-
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"))
 
-ggsave(filename = paste0("output/",
-                         "Fig_samplingEffect_allAcc_long.png"),
+ggsave(filename = paste0("output_noCDm/",
+                         "Fig_samplingEffect_allAcc_long_noCDm.png"),
        plot2, width = 16, height = 20, units = "cm")
 cat("\n", "mean by scenario", "\n")
 plot1
@@ -422,7 +425,8 @@ summTable_CV2 <- ldply(.data=CV2_lmMain, .fun = summTable_fun)
 
 # kable(summTable_CV2[,-1])  
 
-write.csv(file=paste0("Analyse_CV2_n",
+write.csv(file=paste0("output/",
+                      "Analyse_CV2_n",
                       n,
                       "_",
                       today,
@@ -442,8 +446,7 @@ write.csv(file=paste0("Analyse_CV2_n",
 ```{r analyse size effect Main, echo=FALSE}
 
 size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s, data = x[x$CV!="CV2",]),
-                                                                  tr=x$trait[1])) # en attendant CDmean
-# size_lmMain <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Generation + method + CV:s, data = x[x$CV!="CV2",]))
+                                                                  tr=x$trait[1]))
 
 summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
 summTable_size$Trait <- as.character(summTable_size$Trait)
@@ -451,7 +454,7 @@ summTable_size$Trait <- as.character(summTable_size$Trait)
 summTable_size[is.na(summTable_size)] <- ""
 kable(summTable_size[,-1])
 
-write.csv(file=paste0(output,
+write.csv(file=paste0("output_noCDm/",
                       "Analyse_size_noCDm_",
                       today,
                       ".csv"),
