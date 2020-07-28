@@ -27,10 +27,30 @@ if (office=="CIRAD"){
 } else {
   root <- "C:/Users/cedri/"
 }
-knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
+# knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
 # output
 output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
 
+```
+
+```{r function summTable, include=FALSE}
+summTable_fun <- function(x){
+  lmd <- x$lmobj
+  tr <- x$tr
+  
+  r2 <- round(summary(lmd)$r.square, 3)
+  
+  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
+                   "Variable"=rownames(anova(lmd)),
+                   anova(lmd),
+                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
+  rownames(df)=NULL
+  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
+  
+  df[,7][df$Pr..F.==0] <- "<0.001"
+  
+  return(df)
+}
 ```
 
 ```{r load and prepare files, include=FALSE}
@@ -41,11 +61,15 @@ sumAcc_input <- "summary_Accuracy_20200722.csv"
 
 # Load files --------------------------------------------------------------
 
-Acc_infile <- read.csv(Acc_input,
+Acc_infile <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                              Acc_input),
                        header = TRUE)
 Acc <- Acc_infile
 
-summAcc_intput <- read.csv(paste0(sumAcc_input),
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                                  sumAcc_input),
                            header = TRUE)
 summAcc<- summAcc_intput
 
@@ -64,11 +88,7 @@ levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
 Acc$trait[Acc$trait=="YLD14"] <- "YLD"
 Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
 
-Acc$Predictor <- as.character(Acc$Predictor)
-Acc$Predictor[Acc$Predictor=="S02"] <- "LVS02"
-Acc$Predictor[Acc$Predictor=="S03"] <- "LVS03"
-Acc$Predictor <- as.factor(Acc$Predictor)
-Acc$Predictor <- factor(Acc$Predictor, levels = c("LVS02", "LVS03"))
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
 
 Acc$s[Acc$s==0.3] <- 234
 Acc$s <- as.factor(Acc$s)
@@ -95,11 +115,7 @@ levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
 summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
 summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
 
-summAcc$Predictor <- as.character(summAcc$Predictor)
-summAcc$Predictor[summAcc$Predictor=="S02"] <- "LVS02"
-summAcc$Predictor[summAcc$Predictor=="S03"] <- "LVS03"
-summAcc$Predictor <- as.factor(summAcc$Predictor)
-summAcc$Predictor <- factor(summAcc$Predictor, levels = c("LVS02", "LVS03"))
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
 
 summAcc$s[summAcc$s==0.3] <- 234
 summAcc$s <- as.factor(summAcc$s)
@@ -112,27 +128,43 @@ summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", 
 
 summAcc <- droplevels(summAcc)
 
-```
-Acc_input <- "Accuracies_20200713.csv"
-sumAcc_input <- "summary_Accuracy_20200713.csv"
-#Data
-Acc: `r Acc_input`  
-sumAcc:`r sumAcc_input`
-
-
-Data graph
-```{r data fig, echo=TRUE}
 dataPA <- summAcc
 ```
+
+#Data  
+Acc: `r Acc_input`  
+sumAcc:`r sumAcc_input`  
 
 #Résultat
 ## Trait
 ```{r trait, echo=FALSE}
+plot1 <- 
+  ggplot(data=dataPA, aes(x=Generation, y=mean, group=Generation))+
+    geom_boxplot(aes(colour=Generation))+
+    geom_point(position = position_jitterdodge(), aes(colour=Generation))+
+    scale_colour_manual(values = c("blue", "red"))+
+    facet_grid(.~trait)+
+    theme_light()+
+    theme(legend.position = "none")
+ggsave(filename = paste0(output,"Fig_trait_summAcc.png"),
+       plot1, width = 15, height = 15, units = "cm")
 
-# ggplot(data=dataPA, aes(x=trait, y=mean))+
-#   geom_boxplot()+
-#   geom_point(dataPA, aes(x=trait, y=mean, color=xlabel))
-# 
+plot2 <- 
+  ggplot(data=Acc, aes(x=Generation, y=mean, group=Generation))+
+    geom_boxplot(aes(colour=Generation))+
+    geom_point(position = position_jitterdodge(), aes(colour=Generation))+
+    scale_colour_manual(values = c("blue", "red"))+
+    facet_grid(.~trait)+
+    theme_light()+
+    theme(legend.position = "none")
+
+ggsave(filename = paste0("Fig_trait_Acc.png"),
+       plot2, width = 15, height = 15, units = "cm")
+
+cat("\n", "mean by scenario", "\n")
+plot1
+# cat("\n", "all data", "\n")
+# plot2
 
 ```
 
@@ -140,8 +172,8 @@ dataPA <- summAcc
 ## CV2
 ```{r CV2, echo=FALSE}
 
-plot <-
-  # ggplot(dataPA[dataPA$CV == "CV2",], aes(x=Predictor, y= mean, group=method))+
+plot1 <-
+  # ggplot(dataPA[dataPA$CV == "CV2",], aes(x=Generation, y= mean, group=method))+
   #   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
   #   geom_point(position=position_dodge(0.5), aes(color = LOC))+ #shape = Proxy
   #   facet_grid(method~trait)+
@@ -156,28 +188,27 @@ plot <-
   #         strip.text = element_text(colour = "black"),
   #         axis.text.x = element_text(angle = 90))
 
-  ggplot(dataPA[dataPA$CV == "CV2",], aes(x=Predictor, y= mean, group=method))+
+  ggplot(dataPA[dataPA$CV == "CV2",], aes(x=Generation, y= mean, group=LOC))+
     geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
     geom_point(position=position_dodge(0.5), aes(color = LOC))+ #shape = Proxy
     facet_grid(trait~method)+
     # ylab("Cor(GEBV, Yref)")+
     ylab("cor(GEBV, Yref)")+
-    ggtitle("Result CV2, mean PA by scenario")+
+    # ggtitle("Result CV2, mean PA by scenario")+
     theme_light()+
     theme(legend.position = "right")+
     scale_colour_manual(values = c("darkgreen", "darkorange"))+
-    # ggtitle("CV2, PA by trait and method")+
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"),
           axis.text.x = element_text(angle = 90))
 
 
-ggsave(filename = paste0(output,"Fig_CV2_summAcc_long.png"),
-       plot, width = 16, height = 20, units = "cm")
+ggsave(filename = paste0("Fig_CV2_summAcc_long.png"),
+       plot1, width = 15, height = 15, units = "cm")
 
 
-plot <- 
-  # ggplot(Acc[Acc$CV == "CV2",], aes(x=Predictor, y=mean, color=LOC))+
+plot2 <- 
+  # ggplot(Acc[Acc$CV == "CV2",], aes(x=Generation, y=mean, color=LOC))+
   #   geom_boxplot(position=position_dodge(1))+ #shape = Proxy, aes(fill = LOC)
   #   facet_grid(method~trait)+
   #   # ylab("Cor(GEBV, Yref)")+
@@ -191,31 +222,35 @@ plot <-
   #         strip.text = element_text(colour = "black"),
   #         axis.text.x = element_text(angle = 90))
 
-  ggplot(Acc[Acc$CV == "CV2",], aes(x=Predictor, y=mean, color=LOC))+
+  ggplot(Acc[Acc$CV == "CV2",], aes(x=Generation, y=mean, color=LOC))+
     geom_boxplot(position=position_dodge(1))+ #shape = Proxy, aes(fill = LOC)
     facet_grid(trait~method)+
     # ylab("Cor(GEBV, Yref)")+
     ylab("cor(GEBV, Yref)")+
-    ggtitle("Result CV2, all PA by scenario")+
+    # ggtitle("Result CV2, all PA by scenario")+
     theme_light()+
     theme(legend.position = "right")+
     scale_colour_manual(values = c("darkgreen", "darkorange"))+
-    # ggtitle("CV2, PA by trait and method")+
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"),
           axis.text.x = element_text(angle = 90))
 
-ggsave(filename = paste0(output,"Fig_CV2_allAcc_long.png"),
-       plot, width = 16, height = 20, units = "cm")
+ggsave(filename = paste0("Fig_CV2_allAcc_long.png"),
+       plot2, width = 18, height = 15, units = "cm")
 
+cat("\n", "mean by scenario", "\n")
+plot1
+cat("\n", "all data", "\n")
+plot2
 ```
-## Size effect
+
+## Size effect  
 ```{r size effect, echo=FALSE}
-plot <- 
-  # ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Predictor %in% c("LVS02", "LVS03"),], 
+plot1 <- 
+  # ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Generation %in% c("S02", "S03"),], 
   #      aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   # geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
-  # geom_point(aes(color = Predictor, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
+  # geom_point(aes(color = Generation, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
   # facet_grid(method~trait)+
   # # ggtitle("Size comparison")+
   # # ylab("Cor(GEBV, Yref)")+
@@ -228,10 +263,10 @@ plot <-
   # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
-  ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Predictor %in% c("LVS02", "LVS03"),], 
+  ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Generation %in% c("S02", "S03"),], 
        aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
-  geom_point(aes(color = Predictor, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
+  geom_point(aes(color = Generation, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
   facet_grid(trait~method)+
   # ggtitle("Size comparison")+
   # ylab("Cor(GEBV, Yref)")+
@@ -245,13 +280,13 @@ plot <-
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
 
-ggsave(filename = paste0(output,"Fig_sizeEffect_summAcc_long.png"),
-       plot, width = 16, height = 20, units = "cm")
+ggsave(filename = paste0("Fig_sizeEffect_summAcc_long.png"),
+       plot1, width = 16, height = 20, units = "cm")
 
-plot <- 
-  # ggplot(Acc[Acc$LOC != "PAL" & Acc$Predictor %in% c("LVS02", "LVS03"),], 
-  #      aes(x=xlabel, y= mean, color=Predictor, label=sprintf("%0.2f", round(mean, digits = 2))))+
-  # geom_boxplot( position=position_dodge(1))+ #shape = Proxyaes(color = Predictor),
+plot2 <- 
+  # ggplot(Acc[Acc$LOC != "PAL" & Acc$Generation %in% c("S02", "S03"),], 
+  #      aes(x=xlabel, y= mean, color=Generation, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  # geom_boxplot( position=position_dodge(1))+ #shape = Proxyaes(color = Generation),
   # facet_grid(method~trait)+
   # # ggtitle("Size comparison")+
   # # ylab("Cor(GEBV, Yref)")+
@@ -264,9 +299,9 @@ plot <-
   # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
-  ggplot(Acc[Acc$LOC != "PAL" & Acc$Predictor %in% c("LVS02", "LVS03"),], 
-       aes(x=xlabel, y= mean, color=Predictor, label=sprintf("%0.2f", round(mean, digits = 2))))+
-  geom_boxplot( position=position_dodge(1))+ #shape = Proxyaes(color = Predictor),
+  ggplot(Acc[Acc$CV != "CV2" & Acc$Generation %in% c("S02", "S03"),], 
+       aes(x=xlabel, y= mean, color=Generation, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  geom_boxplot( position=position_dodge(1))+ #shape = Proxyaes(color = Generation),
   facet_grid(trait~method)+
   # ggtitle("Size comparison")+
   # ylab("Cor(GEBV, Yref)")+
@@ -280,15 +315,19 @@ plot <-
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
 ggsave(filename = paste0(output,"Fig_sizeEffect_allAcc_long.png"),
-       plot, width = 16, height = 20, units = "cm")
+       plot2, width = 16, height = 20, units = "cm")
+
+cat("\n", "mean by scenario", "\n")
+plot1
+cat("\n", "all data", "\n")
+plot2
 
 ```
 
 ## Sampling effect
 ```{r sampling effect, echo=FALSE}
-cat("Summary by scenario")
-plot <- 
-  # ggplot(dataPA[dataPA$LOC == "SRO" & dataPA$s %in% c("200", "234"),], aes(x=Predictor,y=mean, group=CV))+
+plot1 <- 
+  # ggplot(dataPA[dataPA$LOC == "SRO" & dataPA$s %in% c("200", "234"),], aes(x=Generation,y=mean, group=CV))+
   #   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
   #   geom_point(size=2, position=position_dodge(0.5), aes(color=CV))+ 
   #   facet_grid(method~trait)+
@@ -299,7 +338,7 @@ plot <-
   #   scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   #   theme(strip.background =element_blank(),
   #         strip.text = element_text(colour = "black"))
-  ggplot(dataPA[dataPA$LOC == "SRO" & dataPA$s %in% c("200", "234"),], aes(x=Predictor,y=mean, group=CV))+
+  ggplot(dataPA[dataPA$LOC == "SRO" & dataPA$s %in% c("200", "234"),], aes(x=Generation,y=mean, group=CV))+
     geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
     geom_point(size=2, position=position_dodge(0.5), aes(color=CV))+ 
     facet_grid(trait~method)+
@@ -311,11 +350,10 @@ plot <-
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"))
 ggsave(filename = paste0(output,"Fig_samplingEffect_summAcc_long.png"),
-       plot, width = 16, height = 20, units = "cm")
+       plot1, width = 16, height = 20, units = "cm")
 
-cat("All correlation")
-plot <- 
-  # ggplot(Acc[Acc$LOC == "SRO" & Acc$s %in% c("200", "234"),], aes(x=Predictor,y=mean, color=CV))+
+plot2 <- 
+  # ggplot(Acc[Acc$LOC == "SRO" & Acc$s %in% c("200", "234"),], aes(x=Generation,y=mean, color=CV))+
   #   geom_boxplot(position=position_dodge(1), aes(color=CV))+ 
   #   facet_grid(method~trait)+
   #   scale_colour_manual(values = c("blue", "red", "darkgreen"))+
@@ -325,7 +363,7 @@ plot <-
   #   scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   #   theme(strip.background =element_blank(),
   #         strip.text = element_text(colour = "black"))
-    ggplot(Acc[Acc$LOC == "SRO" & Acc$s %in% c("200", "234"),], aes(x=Predictor,y=mean, color=CV))+
+    ggplot(Acc[Acc$LOC == "SRO" & Acc$s %in% c("200", "234"),], aes(x=Generation,y=mean, color=CV))+
     geom_boxplot(position=position_dodge(1), aes(color=CV))+ 
     facet_grid(trait~method)+
     scale_colour_manual(values = c("blue", "red", "darkgreen"))+
@@ -336,7 +374,11 @@ plot <-
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"))
 ggsave(filename = paste0(output,"Fig_samplingEffect_allAcc_long.png"),
-       plot, width = 16, height = 20, units = "cm")
+       plot2, width = 16, height = 20, units = "cm")
+cat("\n", "mean by scenario", "\n")
+plot1
+cat("\n", "all data", "\n")
+plot2
 
 ```
 
@@ -347,9 +389,12 @@ ggsave(filename = paste0(output,"Fig_samplingEffect_allAcc_long.png"),
 
 
 ## Statistical analysis
+Data analyse
+```{r data stat, echo=TRUE}
+dataPA <- summAcc[summAcc$CV!="IMBcdm",]
+```
 
-```{r, echo=FALSE}
-dataPA <- Acc
+```{r prepare data, echo=FALSE}
 dataPA$z <- (0.5 * (log(1+dataPA$mean) - log(1-dataPA$mean)))
 dataPA$s <- as.factor(dataPA$s)
 
@@ -358,31 +403,9 @@ n <- n[1,2]
 # summary(dataPA)
 ```
 
-```{r function summTable, include=FALSE}
-summTable_fun <- function(x){
-  lmd <- x$lmobj
-  tr <- x$tr
-  
-  r2 <- round(summary(lmd)$r.square, 3)
-  
-  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
-                   "Variable"=rownames(anova(lmd)),
-                   anova(lmd),
-                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
-  rownames(df)=NULL
-  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
-  
-  df[,7][df$Pr..F.==0] <- "<0.001"
-  
-  return(df)
-}
-```
-
-
-
 ```{r analyse CV2, echo=FALSE}
 
-CV2_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ LOC + Predictor + method, data = x[x$CV=="CV2",]),
+CV2_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ LOC + Generation + method, data = x[x$CV=="CV2",]),
                                                                  trait=x$trait[1]))
 
 
@@ -390,8 +413,7 @@ summTable_CV2 <- ldply(.data=CV2_lmMain, .fun = summTable_fun)
 
 # kable(summTable_CV2[,-1])  
 
-write.csv(file=paste0(output,
-                      "Analyse_CV2_n",
+write.csv(file=paste0("Analyse_CV2_n",
                       n,
                       "_",
                       today,
@@ -410,19 +432,21 @@ write.csv(file=paste0(output,
 
 ```{r analyse size effect Main, echo=FALSE}
 
-size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Predictor + method + s, data = x[x$CV!="CV2",]),
+size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s, data = x[x$CV!="CV2",]),
                                                                   tr=x$trait[1])) # en attendant CDmean
-# size_lmMain <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Predictor + method + CV:s, data = x[x$CV!="CV2",]))
+# size_lmMain <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Generation + method + CV:s, data = x[x$CV!="CV2",]))
 
 summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
+summTable_size$Trait <- as.character(summTable_size$Trait)
 
-# kable(summTable_size[,-1])
+summTable_size[is.na(summTable_size)] <- ""
+kable(summTable_size[,-1])
 
-# write.csv(file=paste0(output,
-#                       "Analyse_CV2_",
-#                       today,
-#                       ".csv"),
-#           summTable_CV2[,-1])
+write.csv(file=paste0(output,
+                      "Analyse_size_noCDm_",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
 
 # for (trait in levels(dataPA$trait)){
 #   cat("###",trait,"\n","\n")
@@ -432,21 +456,20 @@ summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
 # }
 ```
 
-```{r analyse size effect Int, echo=FALSE}
+```{r analyse size effect Inter, eval=FALSE, include=FALSE}
 
-size_lmInt <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Predictor + method + s + 
-                                                                 Predictor:method + Predictor:s + method:s, data = x[x$CV!="CV2",]),
+size_lmInt <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s + 
+                                                                 Generation:method + Generation:s + method:s, data = x[x$CV!="CV2",]),
                                                                  tr=x$trait[1]))
-# size_lmInt <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Predictor + method + CV:s + 
-#                                                                  CV:Predictor + CV:method + Predictor:method+
-#                                                                  Predictor:CV:s + method:CV:s, data = x[x$CV!="CV2",]))
+# size_lmInt <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Generation + method + CV:s + 
+#                                                                  CV:Generation + CV:method + Generation:method+
+#                                                                  Generation:CV:s + method:CV:s, data = x[x$CV!="CV2",]))
 
 summaTable_Int <- ldply(.data=size_lmInt, .fun=summTable_fun)
 
 # kable(summaTable_Int[,-1])
 
-write.csv(file=paste0(output,
-                      "Analyse_sizeInter_n",
+write.csv(file=paste0("Analyse_sizeInter_n",
                       n,
                       "_",
                       today,
