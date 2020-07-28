@@ -137,34 +137,21 @@ sumAcc:`r sumAcc_input`
 Data graph
 ```{r data fig, echo=TRUE}
 dataPA <- summAcc
-```
 
-#Résultat
-## Trait
-```{r trait, echo=FALSE}
-
-ggplot(data=dataPA, aes(x=Generation, y=mean, fill=Generation))+
-  geom_boxplot()+
-  geom_point(position=position_jitterdodge())+
-  facet_wrap(.~trait, nrow=1)+
-  theme_light()+
-  theme(legend.position = "none")
- 
-
-```
-
-## RKHS matrix effect
-```{r plot, echo=FALSE}
 datarkhs <- droplevels(dataPA[dataPA$CV %in% c("IMBcdm_Gmat", "IMBcdm_Kmat", "IMBran") & dataPA$method=="RKHS",])
 
 datarkhs$z <- (0.5 * (log(1+datarkhs$mean) - log(1-datarkhs$mean)))
 datarkhs$s <- as.factor(datarkhs$s)
+```
 
+#Résultat
+## RKHS matrix effect
+```{r plot, echo=FALSE}
   ggplot(datarkhs, 
        aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
-  geom_point(aes(color = CV, shape = Generation), position=position_dodge(0.5))+ #shape = Proxy
-  facet_grid(trait~method, scales = "free_y")+
+  geom_point(aes(color = CV), position=position_dodge(0.5))+ #shape = Proxy
+  facet_grid(trait~Generation, scales = "free_y")+
   # ggtitle("Size comparison")+
   # ylab("Cor(GEBV, Yref)")+
   ylab("cor(GEBV, Yref)")+
@@ -178,8 +165,8 @@ datarkhs$s <- as.factor(datarkhs$s)
         strip.text = element_text(colour = "black"))
 ```
 
-
-```{r anova, echo=FALSE}
+## Gmat vs Kmat
+```{r anova Gmat vs Kmat, echo=FALSE}
 # levels(datarkhs$CV)
 # 
 # c1 <- c(0,1,-1)
@@ -202,6 +189,28 @@ summTable_rkhs$Trait <- as.character(summTable_rkhs$Trait)
 summTable_rkhs[is.na(summTable_rkhs)] <- ""
 kable(summTable_rkhs[,-1])
 
+```
+
+## IMBran vs Kmat  
+```{r ran vs Kmat}
+rkhs_lmMain <- dlply(datarkhs, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + CV + s, data =x[x$CV!="IMBcdm_Gmat",]),
+                                                                  tr=x$trait[1]))
+
+summTable_rkhs <- ldply(.data=rkhs_lmMain, .fun=summTable_fun)
+summTable_rkhs$Trait <- as.character(summTable_rkhs$Trait)
+summTable_rkhs[is.na(summTable_rkhs)] <- ""
+kable(summTable_rkhs[,-1])
+```
+
+## IMBran vs Gmat  
+```{r ran vs Gmat}
+rkhs_lmMain <- dlply(datarkhs, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + CV + s, data =x[x$CV!="IMBcdm_Kmat",]),
+                                                                  tr=x$trait[1]))
+
+summTable_rkhs <- ldply(.data=rkhs_lmMain, .fun=summTable_fun)
+summTable_rkhs$Trait <- as.character(summTable_rkhs$Trait)
+summTable_rkhs[is.na(summTable_rkhs)] <- ""
+kable(summTable_rkhs[,-1])
 ```
 
 ## Data table
