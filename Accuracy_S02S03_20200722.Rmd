@@ -146,7 +146,7 @@ plot1 <-
     facet_grid(.~trait)+
     theme_light()+
     theme(legend.position = "none")
-ggsave(filename = paste0(output,"Fig_trait_summAcc.png"),
+ggsave(filename = paste0("output/","Fig_trait_summAcc.png"),
        plot1, width = 15, height = 15, units = "cm")
 
 plot2 <- 
@@ -249,7 +249,7 @@ plot2
 
 ## Size effect  
 ```{r size effect, echo=FALSE}
-plot1 <- 
+# plot1 <- 
   # ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Generation %in% c("S02", "S03"),], 
   #      aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   # geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
