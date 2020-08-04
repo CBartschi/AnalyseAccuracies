@@ -28,8 +28,11 @@ if (office=="CIRAD"){
   root <- "C:/Users/cedri/"
 }
 knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
+
 # output
-output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
+output <- paste0("FigureTable/")
+dir.create(output)
+
 ```
 
 ```{r function summTable, include=FALSE}
@@ -55,8 +58,8 @@ summTable_fun <- function(x){
 ```{r load and prepare files, include=FALSE}
 # File Input  -------------------------------------------------------------
 
-Acc_input <- "Accuracies_20200722.csv"
-sumAcc_input <- "summary_Accuracy_20200722.csv"
+Acc_input <- "Accuracies_20200724.csv"
+sumAcc_input <- "summary_Accuracy_20200724.csv"
 
 # Load files --------------------------------------------------------------
 
@@ -87,12 +90,6 @@ levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
 Acc$trait[Acc$trait=="YLD14"] <- "YLD"
 Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
 
-Acc$Predictor <- as.character(Acc$Predictor)
-Acc$Predictor[Acc$Predictor=="S02"] <- "LVS02"
-Acc$Predictor[Acc$Predictor=="S03"] <- "LVS03"
-Acc$Predictor <- as.factor(Acc$Predictor)
-Acc$Predictor <- factor(Acc$Predictor, levels = c("LVS02", "LVS03"))
-
 Acc$s[Acc$s==0.3] <- 234
 Acc$s <- as.factor(Acc$s)
 
@@ -103,7 +100,7 @@ Acc <- within(Acc, {
 Acc$xlabel <- factor(Acc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
 colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
 
-Acc <- droplevels(Acc)
+Acc <- droplevels(Acc[Acc$CV %in% c("CV2", "IMBran"),])
 
 # summAcc
 levels(summAcc$CV) <- c(levels(summAcc$CV), "CV2")
@@ -118,11 +115,6 @@ levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
 summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
 summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
 
-summAcc$Predictor <- as.character(summAcc$Predictor)
-summAcc$Predictor[summAcc$Predictor=="S02"] <- "LVS02"
-summAcc$Predictor[summAcc$Predictor=="S03"] <- "LVS03"
-summAcc$Predictor <- as.factor(summAcc$Predictor)
-summAcc$Predictor <- factor(summAcc$Predictor, levels = c("LVS02", "LVS03"))
 
 summAcc$s[summAcc$s==0.3] <- 234
 summAcc$s <- as.factor(summAcc$s)
@@ -133,8 +125,10 @@ summAcc <- within(summAcc, {
 
 summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
 
+summAcc <- summAcc[summAcc$CV %in% c("CV2", "IMBran"),]
 summAcc <- droplevels(summAcc)
 
+summary(summAcc)
 ```
 Acc_input <- "Accuracies_20200713.csv"
 sumAcc_input <- "summary_Accuracy_20200713.csv"
@@ -179,7 +173,7 @@ plot <-
   #         strip.text = element_text(colour = "black"),
   #         axis.text.x = element_text(angle = 90))
 
-  ggplot(dataPA[dataPA$CV == "CV2",], aes(x=Predictor, y= mean, group=method))+
+  ggplot(dataPA[dataPA$CV == "CV2",], aes(x=Predictor, y= mean, fill=LOC))+
     geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
     geom_point(position=position_dodge(0.5), aes(color = LOC))+ #shape = Proxy
     facet_grid(trait~method)+
@@ -199,7 +193,7 @@ ggsave(filename = paste0(output,"Fig_CV2_summAcc_long.png"),
        plot, width = 16, height = 20, units = "cm")
 
 
-plot <- 
+# plot <- 
   # ggplot(Acc[Acc$CV == "CV2",], aes(x=Predictor, y=mean, color=LOC))+
   #   geom_boxplot(position=position_dodge(1))+ #shape = Proxy, aes(fill = LOC)
   #   facet_grid(method~trait)+
@@ -230,11 +224,12 @@ plot <-
 
 ggsave(filename = paste0(output,"Fig_CV2_allAcc_long.png"),
        plot, width = 16, height = 20, units = "cm")
+dir()
 
 ```
 ## Size effect
 ```{r size effect, echo=FALSE}
-plot <- 
+# plot <- 
   # ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Predictor %in% c("LVS02", "LVS03"),], 
   #      aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   # geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
@@ -252,7 +247,7 @@ plot <-
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
   ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Predictor %in% c("LVS02", "LVS03"),], 
-       aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+       aes(x=xlabel, y= mean, fill=Predictor, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
   geom_point(aes(color = Predictor, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
   facet_grid(trait~method)+
