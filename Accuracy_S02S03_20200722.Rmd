@@ -266,11 +266,11 @@ plot2
   # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
-  ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Generation %in% c("S02", "S03"),], 
+  ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Generation %in% c("S02", "S03") & dataPA$method=="GBLUP",], 
        aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
   geom_point(aes(color = Generation, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
-  facet_grid(trait~method)+
+  facet_grid(trait~Generation)+
   # ggtitle("Size comparison")+
   # ylab("Cor(GEBV, Yref)")+
   ylab("cor(GEBV, Yref)")+
