@@ -27,7 +27,7 @@ if (office=="CIRAD"){
 } else {
   root <- "C:/Users/cedri/"
 }
-# knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
+knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/AnalyseAccuracies"))
 # output
 # output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
 
@@ -56,8 +56,8 @@ summTable_fun <- function(x){
 ```{r load and prepare files, include=FALSE}
 # File Input  -------------------------------------------------------------
 
-Acc_input <- "Accuracies_20200722.csv"
-sumAcc_input <- "summary_Accuracy_20200722.csv"
+Acc_input <- "Accuracies_20200724.csv"
+sumAcc_input <- "summary_Accuracy_20200724.csv"
 
 # Load files --------------------------------------------------------------
 
@@ -100,7 +100,7 @@ Acc <- within(Acc, {
 Acc$xlabel <- factor(Acc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
 colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
 
-Acc <- droplevels(Acc)
+Acc <- droplevels(Acc[Acc$CV  %in% c("CV2", "IMBran"),])
 
 # summAcc
 levels(summAcc$CV) <- c(levels(summAcc$CV), "CV2")
@@ -128,7 +128,7 @@ summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", 
 
 summAcc <- droplevels(summAcc)
 
-dataPA <- summAcc[summAcc$CV!="IMBcdm",]
+dataPA <- summAcc[summAcc$CV  %in% c("CV2", "IMBran"),]
 Acc <- Acc[Acc$CV!="IMBcdm",]
 ```
 
@@ -173,7 +173,8 @@ cat("\n", "mean by scenario", "\n")
 plot1
 # cat("\n", "all data", "\n")
 # plot2
-
+dir()
+getwd()
 ```
 
 
@@ -276,7 +277,7 @@ plot1 <-
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
   ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Generation %in% c("S02", "S03"),], 
-       aes(x=xlabel, y= mean, group=xlabel, label=sprintf("%0.2f", round(mean, digits = 2))))+
+       aes(x=xlabel, y= mean, group=Generation, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
   geom_point(aes(color = Generation), position=position_dodge(0.5))+ #shape = Proxy
   facet_grid(trait~method)+
@@ -291,7 +292,6 @@ plot1 <-
   scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   theme(strip.background =element_blank(),
         strip.text = element_text(colour = "black"))
-
 fileN <- paste0("output_noCDm/",
                          "Fig_sizeEffect_summAcc_long_noCDm.png")
 ggsave(filename = fileN,
@@ -417,7 +417,7 @@ plot2
 ## Statistical analysis
 Data analyse
 ```{r data stat, echo=TRUE}
-dataPA <- droplevels(summAcc[summAcc$CV!="IMBcdm",])
+dataPA <- droplevels(Acc[Acc$CV %in% c("CV2", "IMBran"),])
 ```
 
 ```{r prepare data, echo=FALSE}
@@ -435,9 +435,8 @@ CV2_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ LO
 
 
 summTable_CV2 <- ldply(.data=CV2_lmMain, .fun = summTable_fun)
-
-# kable(summTable_CV2[,-1])  
-fileN <- paste0("output/",
+kable(summTable_CV2[,-1])
+fileN <- paste0("output_noCDm/",
                       "Analyse_CV2_n",
                       n,
                       "_",
@@ -517,5 +516,12 @@ cat(fileN)
 # }
 
 ```
+
+
+## correlation YLD ZN
+```{r}
+YLD_ZN <- dataPA
+```
+
 
 
