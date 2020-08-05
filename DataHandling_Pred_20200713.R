@@ -137,3 +137,23 @@ write.csv(summary_Acc, paste0("Accuracies_", today, ".csv"),
 write.csv(summary_gen, paste0("summary_Accuracy_", today, ".csv"),
           row.names = F)
 
+
+# Correlation YLD-ZN ------------------------------------------------------
+
+Pred_cmpt <- read.csv("Prediction_cmpt_20200723.csv", header = TRUE)
+
+YLD_ZN <- ddply(Pred_cmpt, .(CV, s, method, Predictor, CVround), function(x) {df <- x[!x$trait %in% c("FL", "PH"),]
+                                                                      df_merged <- merge(df[df$trait=="YLD14",],
+                                                                                         df[df$trait=="ZN",],
+                                                                                         by="DNAID")
+                                                                      return(df_merged)}
+                )
+
+YLD_ZN_summ <- YLD_ZN[,c(1:6,12,13,22,23)]
+colnames(YLD_ZN_summ)[7:10] <- c("ref_YLD", "pred_YLD", "ref_ZN", "pred_ZN")
+
+write.csv(YLD_ZN_summ, "AnalyseAccuracies/Prediction_YLD-ZN_forCorr.csv",
+          row.names = FALSE)
+
+
+

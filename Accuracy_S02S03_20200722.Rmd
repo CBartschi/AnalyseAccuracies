@@ -132,7 +132,7 @@ dataPA <- summAcc[summAcc$CV  %in% c("CV2", "IMBran"),]
 Acc <- Acc[Acc$CV!="IMBcdm",]
 ```
 
-#Data  
+#Data Accuracy 
 Acc: `r Acc_input`  
 sumAcc:`r sumAcc_input`  
 
@@ -520,8 +520,21 @@ cat(fileN)
 
 ## correlation YLD ZN
 ```{r}
-YLD_ZN <- dataPA
+corr_infile <- "Prediction_YLD-ZN_forCorr.csv"
+YLD_ZN_summ <- read.csv(corr_infile,
+                        header = TRUE)
+
+dir()
 ```
+# Data correlation
 
+Prediction file: `r corr_infile`
 
+```{r correlation Ref. echo=FALSE}
+
+ggplot(YLD_ZN_summ[YLD_ZN_summ$CVround==1,], aes(x=ref_YLD, y=ref_ZN, group=CV))+
+  geom_point(aes(color=CV))+
+  facet_grid(method~Predictor)
+
+```
 
