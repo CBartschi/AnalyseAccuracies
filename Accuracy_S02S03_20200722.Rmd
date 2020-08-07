@@ -56,8 +56,8 @@ summTable_fun <- function(x){
 ```{r load and prepare files, include=FALSE}
 # File Input  -------------------------------------------------------------
 
-Acc_input <- "Accuracies_20200722.csv"
-sumAcc_input <- "summary_Accuracy_20200722.csv"
+Acc_input <- "Accuracies_20200724.csv"
+sumAcc_input <- "summary_Accuracy_20200724.csv"
 
 # Load files --------------------------------------------------------------
 
@@ -78,7 +78,7 @@ summAcc<- summAcc_intput
 # Acc
 levels(Acc$CV) <- c(levels(Acc$CV), "CV2")
 Acc$CV[Acc$CV=="CV2_site"] <- "CV2"
-Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm"))
+Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Kmat"))
 
 levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
 Acc$LOC[Acc$LOC=="PA"] <- "PAL"
@@ -105,7 +105,7 @@ Acc <- droplevels(Acc)
 # summAcc
 levels(summAcc$CV) <- c(levels(summAcc$CV), "CV2")
 summAcc$CV[summAcc$CV=="CV2_site"] <- "CV2"
-summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm"))
+summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Kmat"))
 
 levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
 summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
@@ -126,9 +126,11 @@ summAcc <- within(summAcc, {
 
 summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
 
-summAcc <- droplevels(summAcc)
+summAcc <- droplevels(summAcc[summAcc$CV %in% c("CV2", "IMBran", "IMBcdm", "IMBcdm_Kmat"),])
+summAcc$CV[!summAcc$CV %in% c("CV2", "IMBran")] <- "IMBcdm"
 
-dataPA <- summAcc
+
+dataPA <- droplevels(summAcc)
 ```
 
 #Data  
@@ -266,11 +268,11 @@ plot2
   # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
-  ggplot(dataPA[dataPA$CV != "CV2" & dataPA$Generation %in% c("S02", "S03") & dataPA$method=="GBLUP",], 
-       aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  ggplot(dataPA[dataPA$CV != "CV2",], 
+       aes(x=xlabel, y= mean, fill=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
-  geom_point(aes(color = Generation, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
-  facet_grid(trait~Generation)+
+  geom_point(aes(color = CV), position=position_dodge(0.5))+ #shape = Proxy
+  facet_grid(trait~method*Generation)+
   # ggtitle("Size comparison")+
   # ylab("Cor(GEBV, Yref)")+
   ylab("cor(GEBV, Yref)")+
@@ -304,7 +306,7 @@ plot2 <-
   # theme(strip.background =element_blank(),
   #       strip.text = element_text(colour = "black"))
   ggplot(Acc[Acc$CV != "CV2" & Acc$Generation %in% c("S02", "S03"),], 
-       aes(x=xlabel, y= mean, color=Generation, label=sprintf("%0.2f", round(mean, digits = 2))))+
+       aes(x=xlabel, y= mean, group=Generation, label=sprintf("%0.2f", round(mean, digits = 2))))+
   geom_boxplot( position=position_dodge(1))+ #shape = Proxyaes(color = Generation),
   facet_grid(trait~method)+
   # ggtitle("Size comparison")+
