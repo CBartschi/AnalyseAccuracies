@@ -11,15 +11,17 @@ today <- as.character(Sys.Date())
 today <- gsub("-", x=today, "")
 
 # Set WD ------------------------------------------------------------------
-office="CIRAD"
+
+office="maison"
 
 if (office=="CIRAD"){
-  setwd("~/OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun")
+  root <- "D:/Mes Donnees/"
 } else {
-  setwd("C:/Users/cedri/OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun")
+  root <- "C:/Users/cedri/"
 }
 
-dir()
+setwd(paste0(root,
+             "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun"))
 
 # Load files --------------------------------------------------------
 Pred_cmpt <- NULL
@@ -80,7 +82,7 @@ Pred_cmpt$Predictor <- as.factor(Pred_cmpt$Predictor)
 write.csv(Pred_cmpt, paste0("Prediction_cmpt_", today, ".csv"),
 row.names = F)
 
-Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
+# Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
 # Pred_cmpt_wide <- reshape(Pred_cmpt,
 #                      direction = "wide",
 #                      v.names = c("ref", "pred"),
@@ -91,12 +93,16 @@ Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
 
 # load reference ----------------------------------------------------------
 
-S02 <- read.csv("~/OneDrive/AnalysePheno/PCT27/Output_cluster/S02_REFERENCE_on384_20200722.csv",
+S02 <- read.csv(paste0(root,
+                       "OneDrive/AnalysePheno/PCT27/Output_cluster/", 
+                       "S02_REFERENCE_on334_20200722.csv"),
                    header = TRUE)
 colnames(S02)[5] <- paste0("S02_", colnames(S02)[5])
 S02$ID <- paste0(S02$Trait, S02$LOC, S02$DNAID, "S02")
 
-S03 <- read.csv("~/OneDrive/AnalysePheno/PCT27/Output_cluster/S03_REFERENCE_20200722.csv",
+S03 <- read.csv(paste0(root,
+                       "OneDrive/AnalysePheno/PCT27/Output_cluster/", 
+                       "S03_REFERENCE_20200722.csv"),
                    header = TRUE)
 colnames(S03)[5] <- paste0("S03_", colnames(S03)[5])
 S03$ID <- paste0(S03$Trait, S03$LOC, S03$DNAID, "S03")

@@ -200,11 +200,10 @@ plot1 <-
     # ggtitle("Result CV2, mean PA by scenario")+
     theme_light()+
     theme(legend.position = "right")+
-    scale_colour_manual(values = c("darkgreen", "darkorange"))+
+    scale_colour_manual(values = c("darkgreen", "darkorange"), name = "Site")+
     theme(strip.background =element_blank(),
           strip.text = element_text(colour = "black"),
           axis.text.x = element_text(angle = 90))
-
 
 ggsave(filename = paste0("output/",
                          "Fig_CV2_summAcc_long.png"),
@@ -247,6 +246,9 @@ cat("\n", "mean by scenario", "\n")
 plot1
 cat("\n", "all data", "\n")
 plot2
+
+dev.off(
+)
 ```
 
 ## Size effect  
