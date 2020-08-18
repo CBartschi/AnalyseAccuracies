@@ -1,0 +1,131 @@
+---
+title: "Environment correlation for SRO subset"
+author: "Cédric Bärtschi"
+date: "6 août 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+library(plyr)
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set WD ------------------------------------------------------------------
+office="CIRAD"
+
+if (office=="CIRAD"){
+  root <- "D:/Mes Donnees/"
+} else {
+  root <- "C:/Users/cedri/"
+}
+
+```
+
+```{r load RData, include=FALSE}
+
+phenotype <- read.csv(paste0(root,
+                             "Dropbox/HP_GS_Donnees/Donnees_HPGSZn/These_CB/PCT27_Pheno_Rdata_edit.csv"),
+                      header = TRUE)
+
+S02 <- read.csv(paste0(root,
+                       "/OneDrive/AnalysePheno/PCT27/Output_cluster/S02_REFERENCE_on384_20200722.csv"),
+                   header = TRUE)
+# colnames(S02)[5] <- paste0("S02_", colnames(S02)[5])
+
+S03 <- read.csv(paste0(root,
+                       "/OneDrive/AnalysePheno/PCT27/Output_cluster/S03_REFERENCE_20200722.csv"),
+                   header = TRUE)
+# colnames(S03)[5] <- paste0("S03_", colnames(S03)[5])
+ref <- list(S02=S02, S03=S03)
+```
+
+```{r compute CDm correlation, include=FALSE}
+
+
+method="GBLUP"
+cor_out <- NULL
+for (trait in c("FL", "PH", "YLD14", "ZN")){
+  for (s in c(25, 50, 100, 234)){
+    load(paste0(root,
+        "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/SROsingle/",
+        trait, "_", method, "_SROsingle/",
+        "CVreport_", trait, "_", method, "_IMBcdm_", s, ".RData"))
+    # assign(value=CVreport, x=paste0(trait,method, "_",s))
+    for (b in 1:100){
+      for (gen in c("S02", "S03")){
+      gen_ref <- ref[[gen]]
+      
+      PA <- gen_ref[gen_ref$Trait==trait & gen_ref$LOC=="PA", c("DNAID", "Yref_I")]
+      SR <- gen_ref[gen_ref$Trait==trait & gen_ref$LOC=="SR", c("DNAID", "Yref_I")]
+      
+      x <- CVreport[[b]]
+      
+      calset <- levels(droplevels(as.factor(x[[gen]]$CalSet$SR)))
+      c <- cor(PA[PA$DNAID %in% calset, "Yref_I"], SR[SR$DNAID %in% calset, "Yref_I"])
+
+      cor_out <- rbind(cor_out, cbind("Trait"=trait, "method"=method, "Generation"=gen, "s"=s, "iter"=b, "V1"=c))
+    
+      } # end b
+    } # end gen
+  } # end s
+} # end trait
+summary(cor_out)
+```
+
+```{r compute random correlation, include=FALSE}
+for (trait in c("FL", "PH", "YLD14", "ZN")){
+  for (s in c(25, 50, 100, 234)){
+    for (gen in c("S02", "S03")){
+      gen_ref <- ref[[gen]]
+      PA <- gen_ref[gen_ref$Trait==trait & gen_ref$LOC=="PA", c("DNAID", "Yref_I")]
+      SR <- gen_ref[gen_ref$Trait==trait & gen_ref$LOC=="SR", c("DNAID", "Yref_I")]
+      
+      set.seed(123)        
+      for (iter in 1:100){
+        s_sample <- merge(sample_n(PA, size = s, replace = FALSE),
+                              SR,
+                              by="DNAID"
+                              )
+        correlation <- cor(s_sample$Yref_I.x, s_sample$Yref_I.y)
+            
+        cor_out <- rbind(cor_out, 
+                         cbind("Trait"=trait, 
+                               "method"="random", 
+                               "Generation"=gen, 
+                               "s"=s, 
+                               "iter"=iter,
+                               "V1"=correlation))
+        
+
+      }
+    }
+  }
+}
+
+cor_out <- as.data.frame(cor_out)
+cor_out$V1 <- as.numeric(as.character(cor_out$V1))
+
+```
+
+
+```{r}
+
+summary(cor_out)
+
+sumCor <- ddply(cor_out, .(Trait, method, Generation, s), summarize,
+                "mean"=mean(V1),
+                "sd"=sd(V1))
+summary(sumCor)
+sumCor$s <- factor(sumCor$s, levels = c("25", "50", "100", "234"))
+
+
+ggplot(sumCor, aes(x=s, y=mean, fill=method))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+  geom_point(aes(colour=method), position=position_dodge(0.5))+
+  facet_grid(Trait~Generation)
+
+```
+

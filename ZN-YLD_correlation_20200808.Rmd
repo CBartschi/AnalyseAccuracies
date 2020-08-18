@@ -1,0 +1,313 @@
+---
+title: "Correlation_YLD-ZN"
+author: "Cédric B"
+date: "08/08/2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE, }
+rm(list = ls())
+
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(ggpubr)
+library(knitr)
+today <- as.character(Sys.Date())
+today <- gsub("-", x=today, "")
+
+# Set WD ------------------------------------------------------------------
+office="CIRAD"
+
+if (office=="CIRAD"){
+  root <- "D:/Mes Donnees/"
+} else {
+  root <- "C:/Users/cedri/"
+}
+# knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
+# output
+# output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
+
+output <- "ZN-YLD_corr/"
+dir.create(output)
+
+fixExt <- "png"
+
+
+```
+
+```{r function summTable, include=FALSE}
+summTable_fun <- function(x){
+  lmd <- x$lmobj
+  tr <- x$tr
+  
+  r2 <- round(summary(lmd)$r.square, 3)
+  
+  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
+                   "Variable"=rownames(anova(lmd)),
+                   anova(lmd),
+                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
+  rownames(df)=NULL
+  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
+  
+  df[,7][df$Pr..F.==0] <- "<0.001"
+  
+  return(df)
+}
+```
+
+```{r load and prepare ref files, include=FALSE}
+S02_infile <- read.csv(paste0(root,
+                       "/OneDrive/AnalysePheno/PCT27/Output_cluster/S02_REFERENCE_on384_20200722.csv"),
+                   header = TRUE)
+S02 <- S02_infile[S02_infile$Trait %in% c("YLD14", "ZN"),]
+S02_wide <- reshape(S02,
+                    direction = "wide",
+                    v.names = "Yref_I",
+                    timevar = "Trait",
+                    idvar = c("ID", "LOC", "DNAID"),
+                    drop = "standard.error"
+                    )
+colnames(S02_wide)[4:5] <- c("YLD", "ZN")
+
+
+S03_infile <- read.csv(paste0(root,
+                       "/OneDrive/AnalysePheno/PCT27/Output_cluster/S03_REFERENCE_20200722.csv"),
+                   header = TRUE)
+S03 <- S03_infile[S03_infile$Trait %in% c("YLD14", "ZN"),]
+S03_wide <- reshape(S03,
+                    direction = "wide",
+                    v.names = "Yref_I",
+                    timevar = "Trait",
+                    idvar = c("ID", "LOC", "DNAID"),
+                    drop = "standard.error"
+                    )
+colnames(S03_wide)[4:5] <- c("YLD", "ZN")
+# colnames(S03)[5] <- paste0("S03_", colnames(S03)[5])
+ref <- list(S02_wide=S02_wide, S03_wide=S03_wide, S02=S02, S03=S03)
+
+```
+
+```{r load and prepare prediction files, include=FALSE}
+# File Input  -------------------------------------------------------------
+
+Acc_input <- "Accuracies_20200724.csv"
+sumAcc_input <- "summary_Accuracy_20200724.csv"
+
+# Load files --------------------------------------------------------------
+
+Acc_infile <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                              Acc_input),
+                       header = TRUE)
+Acc <- Acc_infile
+
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                                  sumAcc_input),
+                           header = TRUE)
+summAcc<- summAcc_intput
+
+# Prepare df --------------------------------------------------
+
+# Acc
+levels(Acc$CV) <- c(levels(Acc$CV), "CV2")
+Acc$CV[Acc$CV=="CV2_site"] <- "CV2"
+Acc$CV <- factor(Acc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Kmat"))
+
+levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
+Acc$LOC[Acc$LOC=="PA"] <- "PAL"
+Acc$LOC[Acc$LOC=="SR"] <- "SRO"
+
+levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
+Acc$trait[Acc$trait=="YLD14"] <- "YLD"
+Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
+
+Acc$s[Acc$s==0.3] <- 234
+Acc$s <- as.factor(Acc$s)
+
+Acc <- within(Acc, {
+  xlabel <- ifelse(Acc$CV=="CV2", paste0(as.character(Acc$LOC), " ", as.character(Acc$s)), as.character(Acc$s))
+})
+
+Acc$xlabel <- factor(Acc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
+colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
+
+Acc <- droplevels(Acc)
+
+# summAcc
+levels(summAcc$CV) <- c(levels(summAcc$CV), "CV2")
+summAcc$CV[summAcc$CV=="CV2_site"] <- "CV2"
+summAcc$CV <- factor(summAcc$CV, levels = c("CV2", "IMBran", "IMBcdm", "IMBcdm_Kmat"))
+
+levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
+summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
+summAcc$LOC[summAcc$LOC=="SR"] <- "SRO"
+
+levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
+summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
+summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
+
+summAcc$s[summAcc$s==0.3] <- 234
+summAcc$s <- as.factor(summAcc$s)
+
+summAcc <- within(summAcc, {
+  xlabel <- ifelse(summAcc$CV=="CV2", paste0(as.character(summAcc$LOC), " ", as.character(summAcc$s)), as.character(summAcc$s))
+})
+
+summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
+
+summAcc <- droplevels(summAcc[summAcc$CV %in% c("CV2", "IMBran", "IMBcdm", "IMBcdm_Kmat"),])
+summAcc$CV[!summAcc$CV %in% c("CV2", "IMBran")] <- "IMBcdm"
+
+
+dataPA <- droplevels(summAcc)
+```
+
+```{r site correlation YLD, echo=FALSE}
+dataset <- ref$S02
+S02_LOC <- reshape(dataset[dataset$Trait=="ZN",],
+                    direction = "wide",
+                    v.names = "Yref_I",
+                    timevar = "LOC",
+                    idvar = c("DNAID"),
+                    drop = c("ID", "standard.error")
+                    )
+colnames(S02_LOC)[3:4] <- c("PA", "SR")
+
+dataset <- ref$S03
+S03_LOC <- reshape(dataset[dataset$Trait=="ZN",],
+                    direction = "wide",
+                    v.names = "Yref_I",
+                    timevar = "LOC",
+                    idvar = c("DNAID"),
+                    drop = c("ID", "standard.error")
+                    )
+colnames(S03_LOC)[3:4] <- c("PA", "SR")
+
+model <- lm(PA~SR, data = S03_LOC)
+
+twenty8 <- data.frame(SR=28)
+predict(model, twenty8, se.fit = TRUE)
+```
+
+```{r ref YLD ZN regression, echo=FALSE}
+plot_list <- list()
+for (gen in c("S02","S03")){
+  
+  data <- ref[[paste0(gen,"_wide")]]
+  data$DNAID <- as.factor(data$DNAID)
+  summary(data)
+  
+  PAdat <- droplevels(data[data$LOC=="PA",])
+  summary(PAdat)
+  
+  model <- lm(ZN~YLD, data = PAdat)
+
+  highZN <- as.data.frame(predict(model, interval = "confidence"))
+  highZN <- merge(highZN, model$model, by=0)
+  highZN <- merge(highZN, PAdat[,c(2,3)], by.x="Row.names", by.y=0)
+
+  highZN <- within(highZN, {
+    highZN <- ifelse(highZN$ZN>highZN$upr, "highZN", "lowZN")
+  })
+
+# ggplot(highZN, aes(x=YLD, y=fit))+
+#   geom_line()+
+#   geom_line(data=highZN, aes(x=YLD, y=lwr), color="blue")+
+#     geom_line(data=highZN, aes(x=YLD, y=upr), color="blue")+
+#   geom_point(data=highZN, aes(x=YLD, y=ZN, fill=highZN, colour=highZN))
+
+  highZN$highZN <- as.factor(highZN$highZN)
+  highZN_dnaid <- highZN$DNAID[highZN$highZN=="highZN"]
+  
+  data <- within(data, {
+    highZN <- as.factor(ifelse(data$DNAID %in% highZN_dnaid, "highZN", "lowZN"))
+  })
+
+  plot_list[[gen]] <-
+    ggplot(data, aes(x=YLD, y=ZN))+
+    geom_point(aes(color=highZN))+
+    facet_grid(.~LOC, scales = "free_x")+
+    scale_color_manual(values = c("green", "black"))+
+    geom_smooth(method="lm", se=TRUE)+
+    ggtitle(paste0(gen,", cor(ZN, YLD) reference"))+
+    theme_light()
+  
+  print(
+    plot_list[[gen]]
+    )
+  
+  ggsave(plot_list[[gen]],
+       filename = paste0("Cor_ZNYLD_", gen, ".", fixExt),
+       device = fixExt,
+       path = output,
+       width = 16, height = 20, units = "cm")
+  }
+
+
+
+```
+```{r}
+plot_list <- list()
+
+dataset <- ref$S02
+S02_LOC <- reshape(dataset,
+                    direction = "wide",
+                    v.names = "Yref_I",
+                    timevar = c("Trait"),
+                    idvar = c("DNAID", "LOC"),
+                    drop = c("ID", "standard.error")
+                    )
+S02_LOC <- reshape(S02_LOC,
+                direction = "wide",
+                v.names = c("Yref_I.YLD14", "Yref_I.ZN"),
+                timevar = "LOC",
+                idvar= "DNAID")
+colnames(S02_LOC)[2:5] <- c("YLD_PAL", "ZN_PAL", "YLD_SRO", "ZN_SRO")
+
+qtl90 <- quantile(S02_LOC$ZN_SRO, probs = 0.9)
+qtl75 <- quantile(S02_LOC$ZN_SRO, probs = 0.75)
+
+S02_LOC <- within(S02_LOC, {
+  highZN90 <- as.numeric(ifelse(S02_LOC$ZN_SRO>=qtl90, S02_LOC$ZN_SRO, "0"))
+  highZN75 <- as.numeric(ifelse(S02_LOC$ZN_SRO>=qtl75, S02_LOC$ZN_SRO, "0"))
+
+})
+
+dataset <- ref$S03
+S03_LOC <- reshape(dataset,
+                    direction = "wide",
+                    v.names = "Yref_I",
+                    timevar = c("Trait"),
+                    idvar = c("DNAID", "LOC"),
+                    drop = c("ID", "standard.error")
+                    )
+S03_LOC <- reshape(S03_LOC,
+                direction = "wide",
+                v.names = c("Yref_I.YLD14", "Yref_I.ZN"),
+                timevar = "LOC",
+                idvar= "DNAID")
+colnames(S03_LOC)[2:5] <- c("YLD_PAL", "ZN_PAL", "YLD_SRO", "ZN_SRO")
+ref[["S02_LOC"]] <- S02_LOC
+ref[["S03_LOC"]] <- S03_LOC
+
+for (gen in c("S02","S03")){
+  
+  data <- ref[[paste0(gen,"_LOC")]]
+  data$DNAID <- as.factor(data$DNAID)
+  summary(data)
+print(
+ggplot(data, aes(x=YLD_PAL, y=YLD_SRO))+
+  geom_point(aes(colour=highZN90))+
+  scale_colour_gradient(low = "black", high = "red")+
+  theme_light()
+)
+}
+```
+
