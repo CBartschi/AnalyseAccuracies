@@ -1,0 +1,435 @@
+---
+title: "Accuracies_GS_SROsingle"
+author: "Cédric Bärtschi"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE, }
+rm(list = ls())
+
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(ggpubr)
+library(knitr)
+today <- as.character(Sys.Date())
+today <- gsub("-", x=today, "")
+
+# Set WD ------------------------------------------------------------------
+office="CIRAD"
+
+if (office=="CIRAD"){
+  root <- "D:/Mes Donnees/"
+} else {
+  root <- "C:/Users/cedri/"
+}
+# knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
+# output
+# output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
+getwd()
+
+output <- "output_SROsingle/"
+```
+
+```{r function summTable, include=FALSE}
+summTable_fun <- function(x){
+  lmd <- x$lmobj
+  tr <- x$tr
+  
+  r2 <- round(summary(lmd)$r.square, 3)
+  
+  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
+                   "Variable"=rownames(anova(lmd)),
+                   anova(lmd),
+                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
+  rownames(df)=NULL
+  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
+  
+  df[,7][df$Pr..F.==0] <- "<0.001"
+  
+  return(df)
+}
+```
+
+```{r load and prepare files single SRO, include=FALSE}
+# File Input  -------------------------------------------------------------
+
+Acc_input <- "Accuracies100_SROsingle20200818.csv"
+sumAcc_input <- "summary_Accuracy100_SROsingle20200818.csv"
+
+# Load files --------------------------------------------------------------
+
+Acc_infile <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/SROsingle/",
+                              Acc_input),
+                       header = TRUE)
+Acc <- Acc_infile
+
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/SROsingle/",
+                                  sumAcc_input),
+                           header = TRUE)
+summAcc<- summAcc_intput
+
+# Prepare df --------------------------------------------------
+
+# Acc
+levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
+Acc$trait[Acc$trait=="YLD14"] <- "YLD"
+Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
+
+Acc$s[Acc$s==0.3] <- 234
+Acc$s <- as.factor(Acc$s)
+
+Acc <- within(Acc, {
+  xlabel <- ifelse(Acc$CV=="CV2", paste0(as.character(Acc$LOC), " ", as.character(Acc$s)), as.character(Acc$s))
+})
+Acc$xlabel <- factor(Acc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
+colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
+
+Acc <- droplevels(Acc)
+
+# summAcc
+levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
+summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
+summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
+
+summAcc$s[summAcc$s==0.3] <- 234
+summAcc$s <- as.factor(summAcc$s)
+
+summAcc <- within(summAcc, {
+  xlabel <- ifelse(summAcc$CV=="CV2", paste0(as.character(summAcc$LOC), " ", as.character(summAcc$s)), as.character(summAcc$s))
+})
+summAcc$xlabel <- factor(summAcc$xlabel, levels = c("PAL 234", "SRO 234", "25", "50", "100", "200"))
+
+summAcc$LOC <- "SRO"
+singlePA <- droplevels(summAcc[summAcc$s!=234,])
+```
+
+```{r load multienvi summary, include=FALSE}
+sumMulti_input <- "summary_Accuracy_20200814.csv"
+
+# Load files --------------------------------------------------------------
+
+sumMulti_intput <- read.csv(paste0(root,
+                                   "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                                   sumMulti_input),
+                            header = TRUE)
+summMulti<- sumMulti_intput[sumMulti_intput$CV=="IMBran",]
+
+# summAcc
+
+levels(summMulti$LOC) <- c(levels(summMulti$LOC), "PAL", "SRO")
+summMulti$LOC[summMulti$LOC=="PA"] <- "PAL"
+summMulti$LOC[summMulti$LOC=="SR"] <- "SRO"
+
+levels(summMulti$trait) <- c(levels(summMulti$trait), "YLD")
+summMulti$trait[summMulti$trait=="YLD14"] <- "YLD"
+summMulti$trait <- factor(summMulti$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summMulti)[colnames(summMulti)=="Predictor"] <- "Generation"
+
+summMulti$s <- factor(summMulti$s, levels = c("25", "50", "100", "200"))
+
+
+multi_summ <- droplevels(summMulti)
+
+# 
+# multiSing <- rbind(cbind("PAL data"="included", multiPA),
+#                    cbind("PAL data"="not included", Acc[,colnames(multiPA)]))
+
+# write.csv(multiSing,
+#           file = paste0(output,
+#                         "SizeEffect_multiSingle_",
+#                         today,
+#                         ".csv"),
+#           row.names = FALSE)
+```
+
+
+```{r load multi accuracies, include=FALSE}
+Accmulti_infile <- "Accuracies_20200814.csv"
+
+# Load files --------------------------------------------------------------
+
+Accmulti_intput <- read.csv(paste0(root,
+                                   "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/",
+                                   Accmulti_infile),
+                            header = TRUE)
+Accmulti<- Accmulti_intput[Accmulti_intput$CV=="IMBran",]
+
+# summAcc
+
+levels(Accmulti$LOC) <- c(levels(Accmulti$LOC), "PAL", "SRO")
+Accmulti$LOC[Accmulti$LOC=="PA"] <- "PAL"
+Accmulti$LOC[Accmulti$LOC=="SR"] <- "SRO"
+
+levels(Accmulti$trait) <- c(levels(Accmulti$trait), "YLD")
+Accmulti$trait[Accmulti$trait=="YLD14"] <- "YLD"
+Accmulti$trait <- factor(Accmulti$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Accmulti)[colnames(Accmulti)=="Predictor"] <- "Generation"
+
+colnames(Accmulti)[colnames(Accmulti)=="V1"] <- "mean"
+Accmulti$s <- factor(Accmulti$s, levels = c("25", "50", "100", "200"))
+
+multi_Acc <- droplevels(Accmulti[,-5])
+
+
+multiSing_Acc <- rbind(cbind("PALdata"="included", multi_Acc),
+                   cbind("PALdata"="not included", Acc[,colnames(multi_Acc)]))
+# 
+# write.csv(multiSing,
+#           file = paste0(output,
+#                         "SizeEffect_multiSingle_",
+#                         today,
+#                         ".csv"),
+#           row.names = FALSE)
+
+```
+# Objectives
+Plot and analyse single and multi Acc in SRO
+
+# Data  
+Acc: `r Acc_input`  
+sumAcc:`r sumAcc_input`  
+multi: `r sumMulti_input`
+
+#Résultat
+## Size effect  
+```{r size effect single, echo=FALSE}
+plot1 <-
+  # ggplot(dataPA[dataPA$LOC != "PAL" & dataPA$Generation %in% c("S02", "S03"),], 
+  #      aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  # geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+  # geom_point(aes(color = Generation, shape = CV), position=position_dodge(0.5))+ #shape = Proxy
+  # facet_grid(method~trait)+
+  # # ggtitle("Size comparison")+
+  # # ylab("Cor(GEBV, Yref)")+
+  # ylab("cor(GEBV, Yref)")+
+  # xlab("SRO set size")+
+  # scale_colour_manual(values = c("blue", "red"))+
+  # theme_light()+
+  # theme(legend.position = "bottom",
+  #       axis.text.x = element_text(angle = 90))+
+  # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  # theme(strip.background =element_blank(),
+  #       strip.text = element_text(colour = "black"))
+  ggplot(singlePA,
+       aes(x=xlabel, y= mean, group=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+  geom_point(aes(color=CV), position=position_dodge(0.5))+
+  facet_grid(trait~Generation*method)+
+  ggtitle("Size comparison, SROsingle")+
+  # ylab("Cor(GEBV, Yref)")+
+  scale_color_manual(values = c("blue", "red"))+
+  ylab("cor(GEBV, Yref)")+
+  xlab("SRO set size")+
+  theme_light()+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  theme(strip.background =element_blank(),
+        strip.text = element_text(colour = "black"))
+
+
+ggsave(plot1,
+       filename = "Fig_sizeEffect_summAcc_long",
+       device = "png",
+       path = output,
+       width = 16, height = 20, units = "cm")
+
+plot2 <- 
+  # ggplot(Acc[Acc$LOC != "PAL" & Acc$Generation %in% c("S02", "S03"),], 
+  #      aes(x=xlabel, y= mean, color=Generation, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  # geom_boxplot( position=position_dodge(1))+ #shape = Proxyaes(color = Generation),
+  # facet_grid(method~trait)+
+  # # ggtitle("Size comparison")+
+  # # ylab("Cor(GEBV, Yref)")+
+  # ylab("cor(GEBV, Yref)")+
+  # xlab("SRO set size")+
+  # scale_colour_manual(values = c("blue", "red"))+
+  # theme_light()+
+  # theme(legend.position = "bottom",
+  #       axis.text.x = element_text(angle = 90))+
+  # scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  # theme(strip.background =element_blank(),
+  #       strip.text = element_text(colour = "black"))
+  ggplot(Acc[Acc$CV != "CV2" & Acc$Generation %in% c("S02", "S03"),], 
+       aes(x=s, y= mean, group=s, fill=CV, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  geom_boxplot(aes(color=CV), position=position_dodge(4))+ #shape = Proxyaes(color = Generation),
+  facet_grid(trait~Generation*method)+
+  # ggtitle("Size comparison")+
+  # ylab("Cor(GEBV, Yref)")+
+  ylab("cor(GEBV, Yref)")+
+  xlab("SRO set size")+
+  scale_colour_manual(values = c("blue", "red"))+
+  theme_light()+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  theme(strip.background =element_blank(),
+        strip.text = element_text(colour = "black"))
+
+ggsave(plot2,
+       filename = "Fig_sizeEffect_allAcc_long",
+       device = "png",
+       path = output,
+       width = 16, height = 20, units = "cm")
+
+cat("\n", "mean by scenario", "\n")
+plot1
+cat("\n", "all data", "\n")
+plot2
+
+```
+
+```{r size effect single et multi, echo=FALSE}
+plot1 <-
+  ggplot(multiSing[multiSing$CV=="IMBran" & multiSing$LOC=="SRO",],
+       aes(x=xlabel, y= mean, group=`PAL data`, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+  geom_point(aes(color=`PAL data`), position=position_dodge(0.5))+
+  facet_grid(trait~Generation*method)+
+  ggtitle("Size comparison, multi vs single")+
+  # ylab("Cor(GEBV, Yref)")+
+  scale_color_manual(values = c("darkviolet", "darkorange"))+
+  ylab("cor(GEBV, Yref)")+
+  xlab("SRO set size")+
+  theme_light()+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  theme(strip.background =element_blank(),
+        strip.text = element_text(colour = "black"))
+plot1
+
+ggsave(plot1,
+       filename = "Fig_sizeEffect_multiSingle",
+       device = "png",
+       path = output,
+       width = 20, height = 20, units = "cm")
+```
+
+```{r size effect single et multi RKHS, echo=FALSE}
+plot1 <-
+  ggplot(multiSing[multiSing$CV=="IMBran" & multiSing$LOC=="SRO" & multiSing$method=="RKHS",],
+       aes(x=xlabel, y= mean, group=`PAL data`, label=sprintf("%0.2f", round(mean, digits = 2))))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+  geom_point(aes(color=`PAL data`), position=position_dodge(0.5))+
+  facet_grid(trait~Generation)+
+  # ggtitle("Size comparison, multi vs single")+
+  scale_color_manual(values = c("darkviolet", "darkorange"))+
+  ylab("cor(GEBV, Yref)")+
+  xlab("SRO set size")+
+  theme_light()+
+  theme(legend.position = "right",
+        axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) sprintf("%0.2f", round(x, 2)))+
+  theme(strip.background =element_blank(),
+        strip.text = element_text(colour = "black"))
+plot1
+
+ggsave(plot1,
+       filename = "Fig_sizeEffect_multiSingle_RKHS",
+       device = "png",
+       path = output,
+       width = 20, height = 20, units = "cm")
+```
+
+## PA Table
+```{r, eval=FALSE}
+# kable(dataPA)
+```
+
+## Statistical analysis
+Data SRO
+```{r data stat, eval=TRUE}
+dataAnalysis <- droplevels(multiSing_Acc[multiSing_Acc$method=="RKHS",])
+```
+
+```{r prepare data, eval=FALSE}
+dataAnalysis$z <- (0.5 * (log(1+dataAnalysis$mean) - log(1-dataAnalysis$mean)))
+dataAnalysis$s <- as.factor(dataAnalysis$s)
+
+# n <- ddply(dataPA, .(trait), summarise, n <- nrow(dataPA))
+# n <- n[1,2]
+summary(dataAnalysis)
+```
+
+```{r analyse size effect Main RKHS, eval=FALSE}
+
+size_lmMain <- dlply(dataAnalysis, .(trait), 
+                     function(x) lm_out <- list(lmobj=lm(z ~ PALdata + Generation  + PALdata:s, data = x),
+                                                                  tr=x$trait[1]))
+
+summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
+summTable_size$Trait <- as.character(summTable_size$Trait)
+
+summTable_size[is.na(summTable_size)] <- ""
+kable(summTable_size[,-1])
+
+write.csv(file=paste0(output,
+                      "Analyse_size_multiSingle_RKHS",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
+
+# for (trait in levels(dataPA$trait)){
+#   cat("###",trait,"\n","\n")
+#   print(anova(size_lmMain[[trait]]$lmobj))
+#
+#   cat("\n","\n","\n")
+# }
+```
+
+# Data analysis single vs multi
+```{r data stat a, eval=TRUE}
+# dataPA <- multiSing 
+```
+
+```{r prepare data, eval=FALSE}
+# dataPA$z <- (0.5 * (log(1+dataPA$mean) - log(1-dataPA$mean)))
+# dataPA$s <- as.factor(dataPA$s)
+# 
+# n <- ddply(dataPA, .(trait), summarise, n <- nrow(dataPA))
+# n <- n[1,2]
+# summary(dataPA)
+```
+
+```{r analyse size effect Main, eval=FALSE}
+# 
+# size_multiS <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ level + Generation + method + s, data = x[x$CV!="CV2",]),
+#                                                                   tr=x$trait[1])) # en attendant CDmean
+# # size_lmMain <- dlply(dataPA, .(trait), function(x) lmMain <- lm(z ~ CV + Generation + method + CV:s, data = x[x$CV!="CV2",]))
+# 
+# summary(size_multiS$FL$lmobj)
+# 
+# summTable_size <- ldply(.data=size_multiS, .fun=summTable_fun)
+# summTable_size$Trait <- as.character(summTable_size$Trait)
+# 
+# summTable_size[is.na(summTable_size)] <- ""
+# kable(summTable_size[,-1])
+# 
+# write.csv(file=paste0(output,
+#                       "Analyse_size_noCDm_",
+#                       today,
+#                       ".csv"),
+#           summTable_size[,-1])
+
+# for (trait in levels(dataPA$trait)){
+#   cat("###",trait,"\n","\n")
+#   print(anova(size_lmMain[[trait]]$lmobj))
+#   
+#   cat("\n","\n","\n")
+# }
+```
+
