@@ -14,12 +14,16 @@ today <- gsub("-", x=today, "")
 office="CIRAD"
 
 if (office=="CIRAD"){
-  setwd("~/OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/SROsingle")
+  root <- "~/"
 } else {
-  setwd("C:/Users/cedri/OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/SROsingle")
+  root <- "C:/Users/cedri/"
 }
 
-getwd()
+setwd(paste0(root,
+             "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/SROsingle")
+)
+
+dir()
 
 # Load files --------------------------------------------------------
 Pred_cmpt <- NULL
@@ -79,10 +83,6 @@ Pred_cmpt$Predictor <- as.factor(Pred_cmpt$Predictor)
 
 summary(Pred_cmpt)
 
-# write.csv(Pred_cmpt, paste0("Prediction_SROsingle_", today, ".csv"),
-# row.names = F)
-
-# Pred_cmpt <- read.csv("Prediction_cmpt_20200721.csv", header = TRUE)
 # Pred_cmpt_wide <- reshape(Pred_cmpt,
 #                      direction = "wide",
 #                      v.names = c("ref", "pred"),
@@ -106,7 +106,9 @@ S03$ID <- paste0(S03$Trait, S03$LOC, S03$DNAID, "S03")
 # Complete prediction with reference --------------------------------------
 
 Pred_ref_S02 <- merge(Pred_cmpt[Pred_cmpt$Predictor=="S02",], S02[,c(1,5)], by="ID")
+colnames(Pred_ref_S02)[11] <- "Yref_I"
 Pred_ref_S03 <- merge(Pred_cmpt[Pred_cmpt$Predictor=="S03",], S03[,c(1,5)], by="ID")
+colnames(Pred_ref_S03)[11] <- "Yref_I"
 
 Pred_list <- list(S02=Pred_ref_S02, S03=Pred_ref_S03)
 
@@ -153,6 +155,7 @@ for (predictor in c("S02", "S03")){
   
   summary_gen <- rbind(summary_gen, summary_Acc_gen)
 }
+
 # 100
 write.csv(summary_Acc100, paste0("Accuracies100_SROsingle", today, ".csv"),
           row.names = F,
@@ -169,3 +172,44 @@ write.csv(summary_Acc, paste0("Accuracies_SROsingle", today, ".csv"),
 write.csv(summary_gen, paste0("summary_Accuracy_SROsingle", today, ".csv"),
           row.names = F)
 
+Pred_cmpt <- rbind(Pred_list$S02[,-7], Pred_list$S03[,-7])
+# write.csv(Pred_cmpt, paste0("Prediction_SROsingle_", today, ".csv"),
+# row.names = F)
+
+# Pred_cmpt <- read.csv("Prediction_SROsingle_20200818.csv", header = TRUE)
+
+
+
+# Fraction of best REF vs Pred --------------------------------------------
+Pred_cmpt$s <- as.factor(Pred_cmpt$s) 
+Pred_cmpt$DNAID <- as.factor(Pred_cmpt$DNAID) 
+Pred_cmpt$CVround <- as.factor(Pred_cmpt$CVround) 
+
+
+
+TopTen_All <- ddply(Pred_cmpt, .(trait, Predictor, CV, s, method, CVround), 
+                    function(x){
+                      topREF <- x[order(x$Yref_I)[1:10],]
+                      topPRED <- x[order(x$pred)[1:10],]
+                      nCommon <- length(intersect(topREF$DNAID, topPRED$DNAID))
+                      return(nCommon)
+                      }
+                    )
+
+TopTen_summary <- ddply(TopTen_All, .(trait, Predictor, CV, s, method), summarize,
+                        mean_common=mean(V1)
+                        )
+
+TopTwenty_All <- ddply(Pred_cmpt, .(trait, Predictor, CV, s, method, CVround), 
+                    function(x){
+                      topREF <- x[order(x$Yref_I)[1:20],]
+                      topPRED <- x[order(x$pred)[1:20],]
+                      nCommon <- length(intersect(topREF$DNAID, topPRED$DNAID))
+                      return(nCommon)
+                    }
+)
+
+TopTwenty_summary <- ddply(TopTwenty_All, .(trait, Predictor, CV, s, method), summarize,
+                        mean_common=mean(V1)
+)
+          
