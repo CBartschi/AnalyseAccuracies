@@ -1,0 +1,583 @@
+---
+title: "Accuracies_GS_LV"
+author: "Cédric Bärtschi"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE, }
+rm(list = ls())
+
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(ggpubr)
+library(knitr)
+today <- as.character(Sys.Date())
+today <- gsub("-", x=today, "")
+
+# Set WD ------------------------------------------------------------------
+office="CIRAD"
+
+if (office=="CIRAD"){
+  root <- "D:/Mes Donnees/"
+} else {
+  root <- "C:/Users/cedri/"
+}
+# knitr::opts_knit$set(root.dir=paste0(root,"OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/S02S03_rerun/"))
+# output
+# output <- paste0(root, "OneDrive/DOC/Writing/Paper1/FigureTable/output/")
+output <- "outputV3/"
+dir.create(output)
+```
+
+```{r function summTable, include=FALSE}
+summTable_fun <- function(x){
+  lmd <- x$lmobj
+  tr <- x$tr
+  
+  r2 <- round(summary(lmd)$r.square, 3)
+  
+  df <- data.frame("Trait"=c(as.character(tr), rep(NA, times=(nrow(anova(lmd))-1))),
+                   "Variable"=rownames(anova(lmd)),
+                   anova(lmd),
+                   "R2"=c(r2, rep(NA, times=(nrow(anova(lmd))-1))))
+  rownames(df)=NULL
+  df[,4:7] <- apply(df[,4:7], 2, function(x) round(x, 3))
+  
+  df[,7][df$Pr..F.==0] <- "<0.001"
+  
+  return(df)
+}
+
+```
+
+
+#Data  
+```{r initialize files, echo=TRUE}
+# File Input  -------------------------------------------------------------
+
+SIN_Acc_infile <- "Accuracies100_SROsingle_20200824.csv"
+SIN_sum_infile <- "summary_Accuracy100_SROsingle_20200824.csv"
+
+IMB_Acc_infile <- "Accuracies_20200824.csv"
+IMB_sum_infile <- "summary_Accuracy_20200824.csv"
+
+BAL_Acc_infile <- "Accuracies100_BAL_20200824.csv"
+BAL_sum_infile <- "summary_Accuracy100_BAL20200824.csv"
+
+CV2_Acc_infile <- "Accuracies100_CV2reduc20200824.csv"
+CV2_sum_infile <- "summary_Accuracy100_CV2reduc20200824.csv"
+```
+
+```{r load and prepare SIN, include=FALSE}
+# Load files Acc-----------------------------------------------------------
+
+Acc_input <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                              "SROsingle/",
+                              SIN_Acc_infile),
+                       header = TRUE)
+Acc <- Acc_input[Acc_input$CV=="IMBran",]
+Acc$LOC <- "SRO"
+
+
+levels(Acc$CV) <- c(levels(Acc$CV), "SIN")
+Acc$CV[Acc$CV=="IMBran"] <- "SIN"
+
+levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
+Acc$trait[Acc$trait=="YLD14"] <- "YLD"
+Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
+
+Acc$s <- as.factor(Acc$s)
+Acc$s <- factor(Acc$s, levels = c("25", "50", "100", "200"))
+
+colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
+
+Acc_SIN <- droplevels(Acc)
+
+# Load files Sum -----------------------------------------------------------
+
+
+summAcc_input <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                                  "SROsingle/",
+                                  SIN_sum_infile),
+                           header = TRUE)
+summAcc<- summAcc_input[summAcc_input$CV=="IMBran",]
+
+summAcc$LOC <- "SRO"
+
+levels(summAcc$CV) <- c(levels(summAcc$CV), "SIN")
+summAcc$CV[summAcc$CV=="IMBran"] <- "SIN"
+
+levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
+summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
+summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
+
+summAcc$s <- as.factor(summAcc$s)
+summAcc$s <- factor(summAcc$s, levels = c("25", "50", "100", "200"))
+
+Sum_SIN <- droplevels(summAcc)
+```
+
+```{r load and prepare IMB, include=FALSE}
+# Load files Acc-----------------------------------------------------------
+
+Acc_input <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                              "S02S03_rerun/",
+                              IMB_Acc_infile),
+                       header = TRUE)
+Acc <- Acc_input[Acc_input$CV=="IMBran",]
+
+levels(Acc$CV) <- c(levels(Acc$CV), "IMB")
+Acc$CV[Acc$CV=="IMBran"] <- "IMB"
+
+
+levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
+Acc$LOC[Acc$LOC=="PA"] <- "PAL"
+Acc$LOC[Acc$LOC=="SR"] <- "SRO"
+
+levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
+Acc$trait[Acc$trait=="YLD14"] <- "YLD"
+Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
+
+Acc$s <- as.factor(Acc$s)
+Acc$s <- factor(Acc$s, levels = c("25", "50", "100", "200"))
+colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
+
+Acc_IMB <- droplevels(Acc)
+
+
+# Load files Sum -----------------------------------------------------------
+
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                                  "S02S03_rerun/",
+                                  IMB_sum_infile),
+                           header = TRUE)
+summAcc<- summAcc_intput[summAcc_intput$CV=="IMBran",]
+
+levels(summAcc$CV) <- c(levels(summAcc$CV), "IMB")
+summAcc$CV[summAcc$CV=="IMBran"] <- "IMB"
+
+levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
+summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
+summAcc$LOC[summAcc$LOC=="SR"] <- "SRO"
+
+levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
+summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
+summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
+
+summAcc$s <- as.factor(summAcc$s)
+summAcc$s <- factor(summAcc$s, levels = c("25", "50", "100", "200"))
+
+Sum_IMB <- droplevels(summAcc)
+```
+
+```{r load and prepare BAL, include=FALSE}
+# Load files Acc-----------------------------------------------------------
+
+Acc_input <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                              "newBAL/",
+                              BAL_Acc_infile),
+                       header = TRUE)
+Acc<- Acc_input[Acc_input$LOC=="SR",]
+
+levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
+Acc$LOC[Acc$LOC=="PA"] <- "PAL"
+Acc$LOC[Acc$LOC=="SR"] <- "SRO"
+
+levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
+Acc$trait[Acc$trait=="YLD14"] <- "YLD"
+Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
+
+Acc$s <- as.factor(Acc$s)
+Acc$s <- factor(Acc$s, levels = c("25", "50", "100", "200"))
+colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
+
+Acc_BAL <- droplevels(Acc)
+
+# Load files Sum -----------------------------------------------------------
+
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                                  "newBAL/",
+                                  BAL_sum_infile),
+                           header = TRUE)
+summAcc<- summAcc_intput[summAcc_intput$LOC=="SR",]
+
+levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
+summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
+summAcc$LOC[summAcc$LOC=="SR"] <- "SRO"
+
+levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
+summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
+summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
+
+summAcc$s <- as.factor(summAcc$s)
+summAcc$s <- factor(summAcc$s, levels = c("25", "50", "100", "200"))
+
+Sum_BAL <- droplevels(summAcc)
+```
+
+```{r load and prepare CV2, include=FALSE}
+# Load files Acc-----------------------------------------------------------
+
+Acc_input <- read.csv(paste0(root,
+                              "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                              "CV2reduc/",
+                              CV2_Acc_infile),
+                       header = TRUE)
+Acc<- Acc_input[Acc_input$LOC=="SR",]
+
+levels(Acc$LOC) <- c(levels(Acc$LOC), "PAL", "SRO")
+Acc$LOC[Acc$LOC=="PA"] <- "PAL"
+Acc$LOC[Acc$LOC=="SR"] <- "SRO"
+
+levels(Acc$trait) <- c(levels(Acc$trait), "YLD")
+Acc$trait[Acc$trait=="YLD14"] <- "YLD"
+Acc$trait <- factor(Acc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(Acc)[colnames(Acc)=="Predictor"] <- "Generation"
+
+Acc$s <- as.factor(Acc$s)
+Acc$s <- factor(Acc$s, levels = c("25", "50", "100", "200"))
+colnames(Acc)[colnames(Acc)=="V1"] <- "mean"
+
+Acc_CV2 <- droplevels(Acc)
+
+# Load files Sum -----------------------------------------------------------
+
+summAcc_intput <- read.csv(paste0(root,
+                                  "OneDrive/A_GenomicPrediction/PredictionASReml/GS_VL/",
+                                  "CV2reduc/",
+                                  CV2_sum_infile),
+                           header = TRUE)
+summAcc<- summAcc_intput[summAcc_intput$LOC=="SR",]
+
+levels(summAcc$LOC) <- c(levels(summAcc$LOC), "PAL", "SRO")
+summAcc$LOC[summAcc$LOC=="PA"] <- "PAL"
+summAcc$LOC[summAcc$LOC=="SR"] <- "SRO"
+
+levels(summAcc$trait) <- c(levels(summAcc$trait), "YLD")
+summAcc$trait[summAcc$trait=="YLD14"] <- "YLD"
+summAcc$trait <- factor(summAcc$trait, levels = c("FL", "PH", "YLD", "ZN"))
+
+colnames(summAcc)[colnames(summAcc)=="Predictor"] <- "Generation"
+
+summAcc$s <- as.factor(summAcc$s)
+summAcc$s <- factor(summAcc$s, levels = c("25", "50", "100", "200"))
+
+Sum_CV2 <- droplevels(summAcc)
+```
+
+```{r combine CV method input, include=FALSE}
+
+summary(Acc_SIN)
+summary(Acc_IMB)
+summary(Acc_BAL)
+summary(Acc_CV2)
+
+
+Acc_cmpt <- rbind(Acc_SIN, Acc_IMB, Acc_BAL, Acc_CV2)
+
+Sum_cmpt <- rbind(Sum_SIN, Sum_IMB, Sum_BAL, Sum_CV2)
+
+```
+
+
+
+#Résultat
+## Trait
+```{r trait, eval=FALSE, echo=FALSE}
+plot1 <- 
+  ggplot(data=Sum_cmpt, aes(x=s, y=mean, group=Generation))+
+    geom_boxplot(aes(colour=Generation))+
+    geom_point(position = position_jitterdodge(), aes(colour=Generation))+
+    scale_colour_manual(values = c("blue", "red"))+
+    facet_grid(.~trait)+
+    theme_light()+
+    theme(legend.position = "none")
+ggsave(filename = paste0("output/","Fig_trait_summAcc.png"),
+       plot1, width = 15, height = 15, units = "cm")
+
+
+ggsave(filename = paste0("output/",
+                         "Fig_trait_Acc.png"),
+       plot2, width = 15, height = 15, units = "cm")
+
+cat("\n", "mean by scenario", "\n")
+plot1
+# cat("\n", "all data", "\n")
+# plot2
+
+```
+## Complete by CV
+```{r plot cmpt, echo=FALSE}
+
+plotS02 <-
+  ggplot(Sum_cmpt[Sum_cmpt$Generation=="S02",], aes(x=s, y= mean, group=CV))+
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+    geom_point(position=position_dodge(0.5), aes(color = CV))+ #shape = Proxy
+    facet_grid(trait~method)+
+    ggtitle("S03")+
+    ylab("cor(GEBV, Yref)")+
+    # ggtitle("Result CV2, mean PA by scenario")+
+    theme_light()+
+    theme(legend.position = "right")+
+    scale_colour_manual(values = c("red", "blue", "darkgreen", "darkorange"), name = "CV scenario")+
+    theme(strip.background =element_blank(),
+          strip.text = element_text(colour = "black"),
+          axis.text.x = element_text(angle = 90))
+
+plotS02
+
+# ggsave(filename = paste0(output,
+#                          "Fig_SIN_Sum_",
+#                          today,
+#                          ".png"),
+#        plot1, width = 15, height = 15, units = "cm")
+# plot1
+
+plotS03 <-
+  ggplot(Sum_cmpt[Sum_cmpt$Generation=="S03",], aes(x=s, y= mean, group=CV))+
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+    geom_point(position=position_dodge(0.5), aes(color = CV))+ #shape = Proxy
+    facet_grid(trait~method)+
+    ggtitle("S03")+
+    ylab("cor(GEBV, Yref)")+
+    # ggtitle("Result CV2, mean PA by scenario")+
+    theme_light()+
+    theme(legend.position = "right")+
+    scale_colour_manual(values = c("red", "blue", "darkgreen", "darkorange"), name = "CV scenario")+
+    theme(strip.background =element_blank(),
+          strip.text = element_text(colour = "black"),
+          axis.text.x = element_text(angle = 90))
+plotS03
+
+```
+
+## SIN
+```{r plot SIN, echo=FALSE}
+
+plot1 <-
+  ggplot(Sum_SIN, aes(x=s, y= mean, group=Generation))+
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+    geom_point(position=position_dodge(0.5), aes(color = Generation))+ #shape = Proxy
+    facet_grid(trait~method)+
+    # ylab("Cor(GEBV, Yref)")+
+    ylab("cor(GEBV, Yref)")+
+    # ggtitle("Result CV2, mean PA by scenario")+
+    theme_light()+
+    theme(legend.position = "right")+
+    scale_colour_manual(values = c("darkgreen", "darkorange"), name = "Generation")+
+    theme(strip.background =element_blank(),
+          strip.text = element_text(colour = "black"),
+          axis.text.x = element_text(angle = 90))
+
+ggsave(filename = paste0(output,
+                         "Fig_SIN_Sum_",
+                         today,
+                         ".png"),
+       plot1, width = 15, height = 15, units = "cm")
+plot1
+
+```
+
+```{r statistic SIN}
+dataPA <- Acc_SIN
+dataPA$z <- (0.5 * (log(1+dataPA$mean) - log(1-dataPA$mean)))
+
+size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s, data = x),
+                                                                  tr=x$trait[1]))
+
+summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
+summTable_size$Trait <- as.character(summTable_size$Trait)
+
+summTable_size[is.na(summTable_size)] <- ""
+kable(summTable_size[,-1])
+
+write.csv(file=paste0(output,
+                      "Analyse_SIN_Acc",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
+```
+
+
+## IMB
+```{r plot IMB, echo=FALSE}
+
+plot1 <-
+  ggplot(Sum_IMB, aes(x=s, y= mean, group=Generation))+
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+    geom_point(position=position_dodge(0.5), aes(color = Generation))+ #shape = Proxy
+    facet_grid(trait~method)+
+    # ylab("Cor(GEBV, Yref)")+
+    ylab("cor(GEBV, Yref)")+
+    # ggtitle("Result CV2, mean PA by scenario")+
+    theme_light()+
+    theme(legend.position = "right")+
+    scale_colour_manual(values = c("darkgreen", "darkorange"), name = "Generation")+
+    theme(strip.background =element_blank(),
+          strip.text = element_text(colour = "black"),
+          axis.text.x = element_text(angle = 90))
+
+ggsave(filename = paste0(output,
+                         "Fig_IMB_Sum_",
+                         today,
+                         ".png"),
+       plot1, width = 15, height = 15, units = "cm")
+plot1
+
+```
+
+```{r statistic IMB}
+dataPA <- Acc_IMB
+dataPA$z <- (0.5 * (log(1+dataPA$mean) - log(1-dataPA$mean)))
+
+size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s, data = x),
+                                                                  tr=x$trait[1]))
+
+summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
+summTable_size$Trait <- as.character(summTable_size$Trait)
+
+summTable_size[is.na(summTable_size)] <- ""
+kable(summTable_size[,-1])
+
+write.csv(file=paste0(output,
+                      "Analyse_IMB_Acc",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
+```
+
+## BAL
+```{r plot BAL, echo=FALSE}
+
+plot1 <-
+  ggplot(Sum_BAL, aes(x=s, y= mean, group=Generation))+
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+    geom_point(position=position_dodge(0.5), aes(color = Generation))+ #shape = Proxy
+    facet_grid(trait~method)+
+    # ylab("Cor(GEBV, Yref)")+
+    ylab("cor(GEBV, Yref)")+
+    # ggtitle("Result CV2, mean PA by scenario")+
+    theme_light()+
+    theme(legend.position = "right")+
+    scale_colour_manual(values = c("darkgreen", "darkorange"), name = "Generation")+
+    theme(strip.background =element_blank(),
+          strip.text = element_text(colour = "black"),
+          axis.text.x = element_text(angle = 90))
+
+ggsave(filename = paste0(output,
+                         "Fig_BAL_Sum_",
+                         today,
+                         ".png"),
+       plot1, width = 15, height = 15, units = "cm")
+plot1
+
+```
+
+```{r statistic BAL}
+dataPA <- Acc_BAL
+dataPA$z <- (0.5 * (log(1+dataPA$mean) - log(1-dataPA$mean)))
+
+size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s, data = x),
+                                                                  tr=x$trait[1]))
+
+summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
+summTable_size$Trait <- as.character(summTable_size$Trait)
+
+summTable_size[is.na(summTable_size)] <- ""
+kable(summTable_size[,-1])
+
+write.csv(file=paste0(output,
+                      "Analyse_BAL_Acc",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
+```
+
+
+## CV2
+```{r plot CV2, echo=FALSE}
+
+plot1 <-
+  ggplot(Sum_CV2, aes(x=s, y= mean, group=Generation))+
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(0.5))+
+    geom_point(position=position_dodge(0.5), aes(color = Generation))+ #shape = Proxy
+    facet_grid(trait~method)+
+    # ylab("Cor(GEBV, Yref)")+
+    ylab("cor(GEBV, Yref)")+
+    # ggtitle("Result CV2, mean PA by scenario")+
+    theme_light()+
+    theme(legend.position = "right")+
+    scale_colour_manual(values = c("darkgreen", "darkorange"), name = "Generation")+
+    theme(strip.background =element_blank(),
+          strip.text = element_text(colour = "black"),
+          axis.text.x = element_text(angle = 90))
+
+ggsave(filename = paste0(output,
+                         "Fig_CV2_Sum_",
+                         today,
+                         ".png"),
+       plot1, width = 15, height = 15, units = "cm")
+plot1
+```
+
+```{r statistic CV2}
+dataPA <- Acc_CV2
+dataPA$z <- (0.5 * (log(1+dataPA$mean) - log(1-dataPA$mean)))
+
+size_lmMain <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s, data = x),
+                                                                  tr=x$trait[1]))
+summTable_size <- ldply(.data=size_lmMain, .fun=summTable_fun)
+summTable_size$Trait <- as.character(summTable_size$Trait)
+
+summTable_size[is.na(summTable_size)] <- ""
+kable(summTable_size[,-1])
+
+write.csv(file=paste0(output,
+                      "Analyse_CV2_Acc",
+                      today,
+                      ".csv"),
+          summTable_size[,-1])
+
+
+# size_lmInt <- dlply(dataPA, .(trait), function(x) lm_out <- list(lmobj=lm(z ~ Generation + method + s + 
+#                                                                  Generation:method + Generation:s + method:s, data = x),
+#                                                                  tr=x$trait[1]))
+# summaTable_Int <- ldply(.data=size_lmInt, .fun=summTable_fun)
+# 
+# kable(summaTable_Int[,-1])
+# 
+# write.csv(file=paste0("Analyse_Inter",
+#                       "_CV2_",
+#                       today,
+#                       ".csv"),
+#           summaTable_Int[,-1])
+
+
+
+```
+
+
